@@ -10,8 +10,16 @@ import pandas as pd
 #get min max
 train_csv = pd.read_csv('train/input.csv')
 test_csv = pd.read_csv('test/input.csv')
-maxval = max(train_csv.drop([train_csv.columns[0], train_csv.columns[1]],axis=1).to_numpy().max(), test_csv.drop([test_csv.columns[0], test_csv.columns[1]],axis=1).to_numpy().max())
-minval = min(train_csv.drop([train_csv.columns[0], train_csv.columns[1]],axis=1).to_numpy().min(), test_csv.drop([test_csv.columns[0], test_csv.columns[1]],axis=1).to_numpy().min())
+maxval = max(train_csv.iloc[:, 3:].to_numpy().max(), test_csv.iloc[:, 3:].to_numpy().max())
+minval = min(train_csv.iloc[:, 3:].to_numpy().min(), test_csv.iloc[:, 3:].to_numpy().min())
+print(minval, maxval)
+
+# get min max of the depths
+helper_arr = (np.arange(train_csv.shape[1]) + 1) % 3 == 0
+helper_arr[0:5] = False
+maxval_z = max(train_csv.iloc[:, helper_arr].to_numpy().max(), test_csv.iloc[:, helper_arr].to_numpy().max())
+minval_z = min(train_csv.iloc[:, helper_arr].to_numpy().min(), test_csv.iloc[:, helper_arr].to_numpy().min())
+print(minval_z, maxval_z)
 
 img_width = 256
 test_transforms = transforms.Compose([
@@ -23,20 +31,21 @@ test_transforms = transforms.Compose([
 
 model = Network(img_width)
 model.load_state_dict(torch.load('model.m'))
-motions_test = MotionDataset('test/input.csv', 'test', test_transforms, (minval,maxval))
+# model.load_state_dict(torch.load('model_c4_l1sum.m'))
+motions_test = MotionDataset('test/input.csv', 'test', test_transforms, (minval,maxval), (minval_z, maxval_z))
 testloader = torch.utils.data.DataLoader(motions_test, batch_size=6, shuffle=True)
-images, heights, labels = next(iter(testloader))
+images, details, labels = next(iter(testloader))
 
 helper.imshow(images[0], normalize=False)
 
 # img = images[0].view(1, 195075)
 # img = torch.zeros(1,120000) + 222
 # Turn off gradients to speed up this part
-print(labels.shape)
 positions = []
 positions_expected = []
 with torch.no_grad():
-    logps = model.forward(images, heights)
+    print(images.shape)
+    logps = model.forward(images, details)
     logps_denormalized = logps 
     labels_denormalized = labels 
     print(np.min(logps_denormalized[0].numpy()), np.min(labels_denormalized[0].numpy()))
@@ -69,62 +78,59 @@ ax = fig.add_subplot(111, projection='3d')
 zdata = positions.T[1]
 xdata = positions.T[0]
 ydata = positions.T[2]
-ax.scatter3D(xdata, ydata, zdata)
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
+bigMarks = [4,5,9,12,17,20]
+scale = [i if i not in bigMarks else 70 for i in range(len(xdata))]
+ax.scatter3D(xdata, ydata, zdata, s=scale)
 for i, pos in enumerate(positions):
     label = None
     if i == 4:
         label = "Neck"
     elif i == 5:
         label = "Head"
-    elif i == 7:
-        label = "LeftArm"
-    elif i == 8:
-        label = "LeftForeArm"
     elif i == 9:
         label = "LeftHand"
-    elif i == 15:
-        label = "RightArm"
-    elif i == 16:
-        label = "RightForeArm"
+    elif i == 12:
+        label = "LeftFoot"
     elif i == 17:
         label = "RightHand"
+    elif i == 20:
+        label = "RightFoot"
     if label is not None:
-        ax.text(pos[0], pos[2], pos[1], label, None)
+        ax.text(pos[0], pos[2], pos[1], label, None, color="green")
 
 zdata_e = positions_expected.T[1]
 xdata_e = positions_expected.T[0]
 ydata_e = positions_expected.T[2]
-ax.scatter3D(xdata_e, ydata_e, zdata_e, marker='^')
+ax.scatter3D(xdata_e, ydata_e, zdata_e, s=scale)
 
 
-# for i, pos in enumerate(positions_expected):
-#     label = str(i)
-#     if i == 4:
-#         label = "Neck"
-#     elif i == 5:
-#         label = "Head"
-#     elif i == 7:
-#         label = "LeftArm"
-#     elif i == 8:
-#         label = "LeftForeArm"
-#     elif i == 9:
-#         label = "LeftHand"
-#     elif i == 15:
-#         label = "RightArm"
-#     elif i == 16:
-#         label = "RightForeArm"
-#     elif i == 17:
-#         label = "RightHand"
-#     if label is not None:
-#         ax.text(pos[0], pos[2], pos[1], label, None)
+for i, pos in enumerate(positions_expected):
+    label = None
+    if i == 4:
+        label = "Neck"
+    elif i == 5:
+        label = "Head"
+    elif i == 9:
+        label = "LeftHand"
+    elif i == 12:
+        label = "LeftFoot"
+    elif i == 17:
+        label = "RightHand"
+    elif i == 20:
+        label = "RightFoot"
+    if label is not None:
+        ax.text(pos[0], pos[2], pos[1], label, None)
+
 
 plt.xlim(0, 512)
-plt.ylim(0, 10)
+plt.ylim(0, 512)
 ax.set_zlim(0,512)
 # rotate the axes and update
 for i in range(0, 2):
-    for angle in range(0, 360):
+    for angle in range(0, 360, 90):
         ax.view_init(0, angle)
-        # ax.view_init(0, -90)
         plt.draw()
-        plt.pause(.001)
+        plt.pause(4)
