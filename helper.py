@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from torch import nn, optim
 from torch.autograd import Variable
 
@@ -92,3 +93,18 @@ def view_classify(img, ps, version="MNIST"):
     ax2.set_xlim(0, 1.1)
 
     plt.tight_layout()
+
+def get_minmax(train_path, test_path):
+    #get min max
+    train_csv = pd.read_csv(train_path)
+    test_csv = pd.read_csv(test_path)
+    maxval = max(train_csv.iloc[:, 3:].to_numpy().max(), test_csv.iloc[:, 3:].to_numpy().max())
+    minval = min(train_csv.iloc[:, 3:].to_numpy().min(), test_csv.iloc[:, 3:].to_numpy().min())
+
+    # get min max of the depths
+    helper_arr = (np.arange(train_csv.shape[1]) + 1) % 3 == 0
+    helper_arr[0:5] = False
+    maxval_z = max(train_csv.iloc[:, helper_arr].to_numpy().max(), test_csv.iloc[:, helper_arr].to_numpy().max())
+    minval_z = min(train_csv.iloc[:, helper_arr].to_numpy().min(), test_csv.iloc[:, helper_arr].to_numpy().min())
+
+    return (minval, maxval), (minval_z, maxval_z)

@@ -37,6 +37,7 @@ testloader = torch.utils.data.DataLoader(motions_test, batch_size=6, shuffle=Tru
 images, details, labels = next(iter(testloader))
 
 helper.imshow(images[0], normalize=False)
+print(images[0].min(), images[0].max())
 
 # img = images[0].view(1, 195075)
 # img = torch.zeros(1,120000) + 222

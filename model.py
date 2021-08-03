@@ -69,7 +69,7 @@ class Network(nn.Module):
         self.output = nn.Linear(1024, 22*3)
 
         # Dropout module with 0.2 drop probability
-        self.dropout = nn.Dropout(p=0.5)
+        self.dropout = nn.Dropout(p=0.4)
 
     def initialize(self):
         self.hidden1.weight.data.zero_()

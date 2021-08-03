@@ -47,12 +47,9 @@ while(True):
     # quitting button you may use any
     # desired button of your choice
 
-    print(frame.shape)
-
     for pos in positions:
         x = int(pos[0].item()) // 2
         y = img_width - int(pos[1].item()) // 2
-        print(type(x), type(y), x, y)
         frame = cv2.circle(frame, (x,y), radius=2, color=(0, 0, 255), thickness=-1)
 
     # Display the resulting frame
