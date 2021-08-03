@@ -30,13 +30,13 @@ while(True):
     positions_expected = []
     
     with torch.no_grad():
-        logps = model.forward(images, details)
+        logps, estimations = model.forward(images, details)
         logps_denormalized = logps 
         for body_index in range(22):
             xyz = []
             xyz_e = []
-            for pos_index in range(3):
-                pos = logps_denormalized[0][body_index*3+pos_index]
+            for pos_index in range(2):
+                pos = logps_denormalized[0][body_index*2+pos_index]
                 pos = pos * (maxval - minval) + minval
 
                 xyz.append(pos)

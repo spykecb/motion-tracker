@@ -30,24 +30,29 @@ class MotionDataset(Dataset):
         image = Image.open(img_name)
         
         details = self.csv_file.iloc[idx, 1:3].astype('float32').values
-        transform = self.csv_file.iloc[idx, 3:].astype('float32').values
-        
-        #normalization
-        helper_arr = (np.arange(transform.shape[0])) % 3 == 2
-        helper_arr_neg = ~helper_arr 
-        transform[helper_arr_neg] = (transform[helper_arr_neg] - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+        transform = self.csv_file.iloc[idx, 3:3+22*2].astype('float32').values
+        confidences = self.csv_file.iloc[idx, 3+22*2:].astype('float32').values
 
-        #depth normalized to similar range as screen position
-        transform[helper_arr] = (transform[helper_arr] - self.minmax_z[0]) / (self.minmax_z[1] - self.minmax_z[0])
-        # transform = sigmoid(transform)
+        # no-depth case
+        transform = (transform - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+
+        # #normalization
+        # helper_arr = (np.arange(transform.shape[0])) % 3 == 2
+        # helper_arr_neg = ~helper_arr 
+        # transform[helper_arr_neg] = (transform[helper_arr_neg] - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+
+        # #depth normalized to similar range as screen position
+        # transform[helper_arr] = (transform[helper_arr] - self.minmax_z[0]) / (self.minmax_z[1] - self.minmax_z[0])
+        # # transform = sigmoid(transform)
         
         transform = np.array(transform)
+        confidences = np.array(confidences)
         
         if self.transforms:
             image = self.transforms(image)
         image = np.array(image)
         
-        return image, details, transform
+        return image, details, transform, confidences
 
 class Network(nn.Module):
     def __init__(self, img_size):
@@ -102,9 +107,12 @@ class Network(nn.Module):
         #Forward pass through the network, returns the output
         x = self.dropout(F.relu(self.hidden1(x)))
         # x = self.dropout(F.relu(self.hidden2(x)))
-        x = torch.sigmoid(self.output(x)).squeeze(1)
-        # x = F.log_softmax(x, dim=1)
-        return x
+        #TODO sigmoid maybe not good here as we're getting position not probability
+        x = self.output(x)
+        y = x[:,22*2:]
+        x = x[:,:22*2]
+        y = torch.sigmoid(y)
+        return x, y
 
 
 

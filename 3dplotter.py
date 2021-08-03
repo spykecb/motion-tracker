@@ -31,9 +31,10 @@ test_transforms = transforms.Compose([
 
 model = Network(img_width)
 model.load_state_dict(torch.load('model.m'))
-# model.load_state_dict(torch.load('model_c4_l1sum.m'))
+# model.load_state_dict(torch.load('model_c4_l1sum23_4.m'))
 motions_test = MotionDataset('test/input.csv', 'test', test_transforms, (minval,maxval), (minval_z, maxval_z))
 testloader = torch.utils.data.DataLoader(motions_test, batch_size=6, shuffle=True)
+print(len(testloader))
 images, details, labels = next(iter(testloader))
 
 helper.imshow(images[0], normalize=False)
