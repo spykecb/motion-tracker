@@ -29,7 +29,7 @@ def test_network(net, trainloader):
     return True
 
 
-def imshow(image, ax=None, title=None, normalize=True):
+def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[]):
     """Imshow for Tensor."""
     if ax is None:
         fig, ax = plt.subplots()
@@ -42,6 +42,7 @@ def imshow(image, ax=None, title=None, normalize=True):
         image = np.clip(image, 0, 1)
 
     ax.imshow(image)
+    ax.scatter(xdata * 256, [256 - y*256 for y in ydata], color='red', s=100)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)

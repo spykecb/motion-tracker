@@ -29,38 +29,37 @@ class MotionDataset(Dataset):
             self.csv_file.iloc[idx, 0])
         image = Image.open(img_name)
         
-        details = self.csv_file.iloc[idx, 1:3].astype('float32').values
-        transform = self.csv_file.iloc[idx, 3:3+22*2].astype('float32').values
-        confidences = self.csv_file.iloc[idx, 3+22*2:].astype('float32').values
-
-        # no-depth case
-        transform = (transform - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+        input_to = 3
+        positions_to = input_to + 22 * 2
+        details_to = positions_to + 22
+        boundaries_to = details_to + 4
+        details = self.csv_file.iloc[idx, 1:input_to].astype('float32').values
+        transform = self.csv_file.iloc[idx, input_to:positions_to].astype('float64').values
+        confidences = self.csv_file.iloc[idx, positions_to:details_to].astype('float32').values
+        boundaries = self.csv_file.iloc[idx, details_to:boundaries_to].astype('float32').values
 
         # #normalization
-        # helper_arr = (np.arange(transform.shape[0])) % 3 == 2
-        # helper_arr_neg = ~helper_arr 
-        # transform[helper_arr_neg] = (transform[helper_arr_neg] - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+        transform = (transform - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+        boundaries = boundaries / 512.0
 
-        # #depth normalized to similar range as screen position
-        # transform[helper_arr] = (transform[helper_arr] - self.minmax_z[0]) / (self.minmax_z[1] - self.minmax_z[0])
-        # # transform = sigmoid(transform)
-        
         transform = np.array(transform)
         confidences = np.array(confidences)
+        boundaries = np.array(boundaries)
         
         if self.transforms:
             image = self.transforms(image)
         image = np.array(image)
         
-        return image, details, transform, confidences
+        return image, details, transform, confidences, boundaries
 
-class Network(nn.Module):
+class PositionFinder(nn.Module):
     def __init__(self, img_size):
         super().__init__()
         self.img_size = img_size
         #defining the layers here
 
         #Convolutional layers
+        #TODO:maybe it would be wiser to increase the kernel size from 3 since we're using 512x512 images. Should be slower though.
         self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
         self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
@@ -71,7 +70,7 @@ class Network(nn.Module):
         #Linear layers
         self.hidden1 = nn.Linear(512*size + 2, 1024)
         # self.hidden2 = nn.Linear(1000, 500)
-        self.output = nn.Linear(1024, 22*3)
+        self.output = nn.Linear(1024, 22*2)
 
         # Dropout module with 0.2 drop probability
         self.dropout = nn.Dropout(p=0.4)
@@ -107,15 +106,58 @@ class Network(nn.Module):
         #Forward pass through the network, returns the output
         x = self.dropout(F.relu(self.hidden1(x)))
         # x = self.dropout(F.relu(self.hidden2(x)))
-        #TODO sigmoid maybe not good here as we're getting position not probability
         x = self.output(x)
-        y = x[:,22*2:]
-        x = x[:,:22*2]
-        y = torch.sigmoid(y)
-        return x, y
+        # y = x[:,22*2:]
+        # x = x[:,:22*2]
+        # y = torch.sigmoid(y)
+        return x
 
+class BoundingBoxFinder(nn.Module):
+    def __init__(self, img_size):
+        super().__init__()
+        self.img_size = img_size
+        #defining the layers here
 
+        #Convolutional layers
+        self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
+        self.pool = nn.MaxPool2d(2,2)
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+        size = self.img_size//8 * self.img_size//8
+        #Linear layers
+        self.hidden1 = nn.Linear(256*size, 512)
+        # self.hidden2 = nn.Linear(1000, 500)
+        self.output = nn.Linear(512, 4)
+
+        # Dropout module with 0.2 drop probability
+        self.dropout = nn.Dropout(p=0.4)
+
+    def initialize(self):
+        self.hidden1.weight.data.zero_()
+        self.hidden1.bias.data.zero_()
+        self.conv1.weight.data.zero_()
+        self.conv1.bias.data.zero_()
+        self.conv2.weight.data.zero_()
+        self.conv2.bias.data.zero_()
+        self.conv3.weight.data.zero_()
+        self.conv3.bias.data.zero_()
+        self.output.weight.data.zero_()
+        self.output.bias.data.zero_()
+        
+    def forward(self, x):
+        #Convolutional layers
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+
+        # make sure input tensor is flattened
+        size = self.img_size//8 * self.img_size//8
+        x = x.view(-1, 256*size)
+
+        #Forward pass through the network, returns the output
+        x = self.dropout(F.relu(self.hidden1(x)))
+        x = self.output(x)
+        return x
+
 
