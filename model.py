@@ -32,6 +32,7 @@ class MotionDataset(Dataset):
             self.csv_file.iloc[idx, 0])
 
         
+        # print(img_name)
         image = Image.open(img_name)
         
         input_to = 3
@@ -39,7 +40,7 @@ class MotionDataset(Dataset):
         confidences_to = positions_to + 22
         boundaries_to = confidences_to + 4
         details = self.csv_file.iloc[idx, 1:input_to].astype('float32').values
-        positions = self.csv_file.iloc[idx, input_to:positions_to].astype('float64').values
+        positions = self.csv_file.iloc[idx, input_to:positions_to].astype('float32').values
         confidences = self.csv_file.iloc[idx, positions_to:confidences_to].astype('float32').values
         boundaries = self.csv_file.iloc[idx, confidences_to:boundaries_to].astype('float32').values
 
@@ -53,6 +54,8 @@ class MotionDataset(Dataset):
         confidences = np.array(confidences)
         boundaries = np.array(boundaries)
 
+
+
         #finding bounding box
         if self.bmodel is not None:
             # orig_img = transforms.ToTensor()(image).view(-1, 3, self.img_size,self.img_size)
@@ -61,6 +64,7 @@ class MotionDataset(Dataset):
             # CHEATING
             bbox_output = boundaries
             image = image.crop(tuple(int(b * 512) for b in bbox_output))
+            pass
         
         if self.transforms:
             image = self.transforms(image)
@@ -69,14 +73,18 @@ class MotionDataset(Dataset):
         inp = {}
         inp["images"] = image
         inp["details"] = details
+        inp["bboxes"] = np.array([])
         if self.bmodel is not None:
             inp["bboxes"] = bbox_output
             # positions = align_targets_in_bounding_boxes(positions, bbox_output, 256)
+            pass
         output = {}
         output["positions"] = positions
         output["confidences"] = confidences
         output["boundaries"] = boundaries
-        
+
+        assert positions.min() >= 0
+        assert positions.max() <= 1
         
         return inp, output
 
@@ -87,17 +95,17 @@ class PositionFinder(nn.Module):
         #defining the layers here
 
         #Convolutional layers
-        self.conv1 = nn.Conv2d(3, 64, 1, padding=1)
+        self.conv1 = nn.Conv2d(3, 64, 1, padding=0)
         self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv3 = nn.Conv2d(128, 256, 1, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, 1, padding=0)
         self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
         self.pool = nn.MaxPool2d(2,2)
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(512*size, 1024)
-        # self.hidden2 = nn.Linear(1000, 500)
-        self.output = nn.Linear(1024, 22*2)
+        self.hidden1 = nn.Linear(512*size + 6, 500)
+        # self.hidden2 = nn.Linear(1024, 512)
+        self.output = nn.Linear(500, 22*2)
 
         # Dropout module with 0.2 drop probability
         self.dropout = nn.Dropout(p=0.4)
@@ -105,6 +113,8 @@ class PositionFinder(nn.Module):
     def initialize(self):
         self.hidden1.weight.data.zero_()
         self.hidden1.bias.data.zero_()
+        # self.hidden2.weight.data.zero_()
+        # self.hidden2.bias.data.zero_()
         self.conv1.weight.data.zero_()
         self.conv1.bias.data.zero_()
         self.conv2.weight.data.zero_()
@@ -127,6 +137,7 @@ class PositionFinder(nn.Module):
         # torch.Size([16, 512, 16, 16])
         size = self.img_size//16 * self.img_size//16
         x = x.view(-1, 512*size)
+        x = torch.cat((x,details, bboxes), dim = 1)
 
         #Forward pass through the network, returns the output
         x = self.dropout(F.relu(self.hidden1(x)))

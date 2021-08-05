@@ -1,5 +1,8 @@
 import os.path
 import csv
+import numpy as np
+
+
 
 with open('test/input.csv', 'r') as inp, open('test/input_new.csv', 'w', newline='') as out:
     writer = csv.writer(out)
@@ -7,14 +10,28 @@ with open('test/input.csv', 'r') as inp, open('test/input_new.csv', 'w', newline
         path = "test/{}".format(row[0])
         if os.path.isfile(path):
             writer.writerow(row)
-
+widths, heights = [],[]
 with open('train/input.csv', 'r') as inp, open('train/input_new.csv', 'w', newline='') as out:
     writer = csv.writer(out)
     for row in csv.reader(inp):
         path = "train/{}".format(row[0])
-        if os.path.isfile(path):
+        x = float(row[-4])
+        y = float(row[-3])
+        x2 = float(row[-2])
+        y2 = float(row[-1])
+        w = x2 - x
+        h = y2 - y
+        widths.append(w)
+        heights.append(h)
+        if os.path.isfile(path) and w >= 64 and h >= 64:
             writer.writerow(row)
 
+widths, heights = np.array(widths), np.array(heights)
+print(len(widths))
+print(np.count_nonzero(widths < 64))
+print(np.count_nonzero(heights < 64))
+print(np.count_nonzero(np.logical_or(widths < 64, heights < 64)))
+print(widths.mean(), heights.mean())
 
 
 os.remove("test/input.csv")
