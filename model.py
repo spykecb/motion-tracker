@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 import torch.nn.functional as F
 from PIL import Image
 import numpy as np
@@ -10,13 +11,14 @@ import os
 class MotionDataset(Dataset):
     """Motion dataset."""
 
-    def __init__(self, csv_file_path, root_dir, transforms, minmax, minmax_z, bboxes = None):        
+    def __init__(self, csv_file_path, root_dir, transforms, minmax, minmax_z, img_size = 512, bmodel = None):        
         self.csv_file = pd.read_csv(csv_file_path, header=None)
         self.root_dir = root_dir
         self.transforms = transforms
         self.minmax = minmax
         self.minmax_z = minmax_z
-        self.bboxes = bboxes
+        self.bmodel = bmodel
+        self.img_size = img_size
 
     def __len__(self):
         return len(self.csv_file)
@@ -28,9 +30,9 @@ class MotionDataset(Dataset):
         img_name = os.path.join(
             self.root_dir, 
             self.csv_file.iloc[idx, 0])
+
+        
         image = Image.open(img_name)
-        # if self.bboxes:
-        #     image = image.crop(tuple(int(b * 512) for b in self.bboxes[idx]))
         
         input_to = 3
         positions_to = input_to + 22 * 2
@@ -45,9 +47,20 @@ class MotionDataset(Dataset):
         positions = (positions - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
         boundaries = boundaries / 512.0
 
+        # TODO: input positions have inverted y (lower left = (0,0)), it should be upper left
         positions = np.array(positions)
+        positions[1::2] = 1 - positions[1::2]
         confidences = np.array(confidences)
         boundaries = np.array(boundaries)
+
+        #finding bounding box
+        if self.bmodel is not None:
+            # orig_img = transforms.ToTensor()(image).view(-1, 3, self.img_size,self.img_size)
+            # bbox_output = self.bmodel.forward(orig_img.to('cuda'))[0]
+
+            # CHEATING
+            bbox_output = boundaries
+            image = image.crop(tuple(int(b * 512) for b in bbox_output))
         
         if self.transforms:
             image = self.transforms(image)
@@ -56,8 +69,9 @@ class MotionDataset(Dataset):
         inp = {}
         inp["images"] = image
         inp["details"] = details
-        if self.bboxes:
-            inp["bboxes"] = self.bboxes[idx]
+        if self.bmodel is not None:
+            inp["bboxes"] = bbox_output
+            # positions = align_targets_in_bounding_boxes(positions, bbox_output, 256)
         output = {}
         output["positions"] = positions
         output["confidences"] = confidences
@@ -67,14 +81,12 @@ class MotionDataset(Dataset):
         return inp, output
 
 class PositionFinder(nn.Module):
-    def __init__(self, img_size, device):
+    def __init__(self, img_size):
         super().__init__()
-        self.device = device
         self.img_size = img_size
         #defining the layers here
 
         #Convolutional layers
-        #TODO:maybe it would be wiser to change the kernel size from 3 since we're using 512x512 images. Should be slower though.
         self.conv1 = nn.Conv2d(3, 64, 1, padding=1)
         self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
         self.conv3 = nn.Conv2d(128, 256, 1, padding=1)
@@ -83,7 +95,7 @@ class PositionFinder(nn.Module):
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(512*size + 6, 1024)
+        self.hidden1 = nn.Linear(512*size, 1024)
         # self.hidden2 = nn.Linear(1000, 500)
         self.output = nn.Linear(1024, 22*2)
 
@@ -93,8 +105,6 @@ class PositionFinder(nn.Module):
     def initialize(self):
         self.hidden1.weight.data.zero_()
         self.hidden1.bias.data.zero_()
-        # self.hidden2.weight.data.zero_()
-        # self.hidden2.bias.data.zero_()
         self.conv1.weight.data.zero_()
         self.conv1.bias.data.zero_()
         self.conv2.weight.data.zero_()
@@ -107,7 +117,6 @@ class PositionFinder(nn.Module):
         self.output.bias.data.zero_()
         
     def forward(self, x, details, bboxes):
-        x, details, bboxes = x.to(self.device), details.to(self.device), bboxes.to(self.device)
         #Convolutional layers
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
@@ -115,29 +124,27 @@ class PositionFinder(nn.Module):
         x = self.pool(F.relu(self.conv4(x)))
 
         # make sure input tensor is flattened
+        # torch.Size([16, 512, 16, 16])
         size = self.img_size//16 * self.img_size//16
         x = x.view(-1, 512*size)
-        x = torch.cat((x,details, bboxes), dim = 1)
 
         #Forward pass through the network, returns the output
         x = self.dropout(F.relu(self.hidden1(x)))
         # x = self.dropout(F.relu(self.hidden2(x)))
         x = self.output(x)
 
-        #Add bbox data
-        #TODO: since the images are resized, maybe adding to the linear nn layer is better
-        # for i in range(len(x)):
-        #     x[i][0::2] = x[i][0::2] + bboxes[i][0]
-        #     x[i][1::2] = x[i][1::2] + bboxes[i][1]
-        # y = x[:,22*2:]
-        # x = x[:,:22*2]
-        # y = torch.sigmoid(y)
+        #Bounding boxes
+        for i in range(x.shape[0]):
+            w = (bboxes[i][2] - bboxes[i][0]) * self.img_size
+            h = (bboxes[i][3] - bboxes[i][1]) * self.img_size
+            x[i,0::2] = bboxes[i][0] + x[i,0::2]*(w/self.img_size)
+            x[i,1::2] = bboxes[i][1] + x[i,1::2]*(h/self.img_size)
+
         return x
 
 class BoundingBoxFinder(nn.Module):
-    def __init__(self, img_size, device):
+    def __init__(self, img_size):
         super().__init__()
-        self.device = device
         self.img_size = img_size
         #defining the layers here
 
@@ -169,7 +176,6 @@ class BoundingBoxFinder(nn.Module):
         self.output.bias.data.zero_()
         
     def forward(self, x):
-        x = x.to(device)
         #Convolutional layers
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
@@ -184,4 +190,19 @@ class BoundingBoxFinder(nn.Module):
         x = self.output(x)
         return x
 
+def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
+    x = bboxes[0] 
+    y = bboxes[1]
+    w = (bboxes[2] - x) * img_size # denormalized width of bounding box
+    h = (bboxes[3] - y) * img_size # denormalized height of bounding box
+    # print(x * img_size,y * img_size,w,h)
+    # print("before", output)
+    output[0::2] = (output[0::2] - x.item()) * (img_size / w.item())
+    output[1::2] = (output[1::2] - y.item()) * (img_size / h.item())
+    # print("after", output)
+
+    return output
+
+def crop_image(image, x1,y1,x2,y2):
+    return image[:,x1:x2,y1:y2]
 

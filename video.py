@@ -1,15 +1,15 @@
 import cv2
 import torch
-from model import Network
+from model import PositionFinder
 import numpy as np
 import time
 from torchvision import transforms
 vid = cv2.VideoCapture(0)
 
 img_width = 256
-model = Network(img_width)
-model.load_state_dict(torch.load('model.m'))
 device = 'cuda'
+model = PositionFinder(img_width, device)
+model.load_state_dict(torch.load('model.m'))
 model.to(device)
 details = torch.Tensor([[0.9,1]])
 mean = [0.485, 0.456, 0.406]
