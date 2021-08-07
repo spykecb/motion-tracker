@@ -23,14 +23,14 @@ with open('train/input.csv', 'r') as inp, open('train/input_new.csv', 'w', newli
         h = y2 - y
         widths.append(w)
         heights.append(h)
-        if os.path.isfile(path) and w >= 64 and h >= 64:
+        if os.path.isfile(path) and w >= 32 and h >= 32:
             writer.writerow(row)
 
 widths, heights = np.array(widths), np.array(heights)
 print(len(widths))
-print(np.count_nonzero(widths < 64))
-print(np.count_nonzero(heights < 64))
-print(np.count_nonzero(np.logical_or(widths < 64, heights < 64)))
+print(np.count_nonzero(widths < 32))
+print(np.count_nonzero(heights < 32))
+print(np.count_nonzero(np.logical_or(widths < 32, heights < 32)))
 print(widths.mean(), heights.mean())
 
 
