@@ -107,29 +107,29 @@ class PositionFinder(nn.Module):
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(512*size, 500)
+        self.hidden1 = nn.Linear(512*size, 1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
-        self.output = nn.Linear(500, 22*3)
+        self.output = nn.Linear(1000, 22*3)
 
         # Dropout module with 0.2 drop probability
         self.dropout = nn.Dropout(p=0.4)
 
     def initialize(self):
-         # self.hidden1.weight.data.zero_()
-        # self.hidden1.bias.data.zero_()
-        # self.hidden2.weight.data.zero_()
-        # self.hidden2.bias.data.zero_()
-        # self.conv1.weight.data.zero_()
-        # self.conv1.bias.data.zero_()
-        # self.conv2.weight.data.zero_()
-        # self.conv2.bias.data.zero_()
-        # self.conv3.weight.data.zero_()
-        # self.conv3.bias.data.zero_()
-        # self.conv4.weight.data.zero_()
-        # self.conv4.bias.data.zero_()
-        # self.output.weight.data.zero_()
-        # self.output.bias.data.zero_()
+        self.hidden1.weight.data.zero_()
+        self.hidden1.bias.data.zero_()
+        self.hidden2.weight.data.zero_()
+        self.hidden2.bias.data.zero_()
+        self.conv1.weight.data.zero_()
+        self.conv1.bias.data.zero_()
+        self.conv2.weight.data.zero_()
+        self.conv2.bias.data.zero_()
+        self.conv3.weight.data.zero_()
+        self.conv3.bias.data.zero_()
+        self.conv4.weight.data.zero_()
+        self.conv4.bias.data.zero_()
+        self.output.weight.data.zero_()
+        self.output.bias.data.zero_()
         pass
         
     def forward(self, x, details, bboxes):
@@ -228,10 +228,12 @@ def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
     w = (bboxes[2] - x) * img_size # denormalized width of bounding box
     h = (bboxes[3] - y) * img_size # denormalized height of bounding box
     # print(x * img_size,y * img_size,w,h)
-    # print("before", output)
+    # print(w,h, "before", output)
+    # print(output.shape)
     output[0::2] = (output[0::2] - x.item()) * (img_size / w.item())
     output[1::2] = (output[1::2] - y.item()) * (img_size / h.item())
     # print("after", output)
+    output = np.clip(output, 0, 1)
 
     return output
 
