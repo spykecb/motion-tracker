@@ -1,33 +1,23 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import math
 from torch import nn, optim
 from torch.autograd import Variable
 
 
-def test_network(net, trainloader):
+# first 44 prime numbers
+prime_numbers = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,193]
 
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(net.parameters(), lr=0.001)
-
-    dataiter = iter(trainloader)
-    images, labels = dataiter.next()
-
-    # Create Variables for the inputs and targets
-    inputs = Variable(images)
-    targets = Variable(images)
-
-    # Clear the gradients from all Variables
-    optimizer.zero_grad()
-
-    # Forward pass, then backward pass, then update weights
-    output = net.forward(inputs)
-    loss = criterion(output, targets)
-    loss.backward()
-    optimizer.step()
-
-    return True
-
+def encode(x):
+    res = 0
+    for i in range(len(x)):
+        a = x[i]
+        p = prime_numbers[i]
+        res += p ** a 
+        print(res)
+    return res
+        
 
 def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[]):
     """Imshow for Tensor."""
@@ -52,19 +42,6 @@ def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[]):
     ax.set_yticklabels('')
 
     return ax
-
-
-def view_recon(img, recon):
-    ''' Function for displaying an image (as a PyTorch Tensor) and its
-        reconstruction also a PyTorch Tensor
-    '''
-
-    fig, axes = plt.subplots(ncols=2, sharex=True, sharey=True)
-    axes[0].imshow(img.numpy().squeeze())
-    axes[1].imshow(recon.data.numpy().squeeze())
-    for ax in axes:
-        ax.axis('off')
-        ax.set_adjustable('box-forced')
 
 
 def get_minmax_quaternion(train_path, test_path):

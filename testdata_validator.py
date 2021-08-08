@@ -1,7 +1,7 @@
 import os.path
 import csv
 import numpy as np
-
+from PIL import Image
 
 
 with open('test/input.csv', 'r') as inp, open('test/input_new.csv', 'w', newline='') as out:
@@ -23,14 +23,20 @@ with open('train/input.csv', 'r') as inp, open('train/input_new.csv', 'w', newli
         h = y2 - y
         widths.append(w)
         heights.append(h)
-        if os.path.isfile(path) and w >= 32 and h >= 32:
+        bbox_output = [x,y,x2,y2]
+        if os.path.isfile(path):
+        # if os.path.isfile(path) and w >= 64 and h >= 64:
+            # image = Image.open(path)
+            # rect = tuple(int(b) for b in bbox_output)
+            # image = image.crop(rect)
+            # image.save(path.replace(".jpg", "_cropped.jpg"), "JPEG")
             writer.writerow(row)
 
 widths, heights = np.array(widths), np.array(heights)
 print(len(widths))
-print(np.count_nonzero(widths < 32))
-print(np.count_nonzero(heights < 32))
-print(np.count_nonzero(np.logical_or(widths < 32, heights < 32)))
+print(np.count_nonzero(widths < 64))
+print(np.count_nonzero(heights < 64))
+print(np.count_nonzero(np.logical_or(widths < 64, heights < 64)))
 print(widths.mean(), heights.mean())
 
 

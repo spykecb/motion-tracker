@@ -44,6 +44,10 @@ class MotionDataset(Dataset):
         confidences = self.csv_file.iloc[idx, positions_to:confidences_to].astype('float32').values
         boundaries = self.csv_file.iloc[idx, confidences_to:boundaries_to].astype('float32').values
 
+        #only caring about head,hand,and legs
+        positions = np.concatenate((positions[10:12], positions[18:20], positions[34:36], positions[24:26], positions[40:42]))
+        confidences = np.array([confidences[5], confidences[9], confidences[17], confidences[12], confidences[20]])
+
         # #normalization
         positions = (positions - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
         boundaries = boundaries / 512.0
@@ -64,8 +68,8 @@ class MotionDataset(Dataset):
 
             # CHEATING
             bbox_output = boundaries
-            rect = tuple(int(b * 512) for b in bbox_output)
-            image = image.crop(rect)
+            # rect = tuple(int(b * 512) for b in bbox_output)
+            # image = image.crop(rect)
             pass
         
         if self.transforms:
@@ -98,22 +102,27 @@ class PositionFinder(nn.Module):
 
         #Convolutional layers
         self.conv1 = nn.Conv2d(3, 64, 1, padding=0)
+        self.conv1_bn = nn.BatchNorm2d(64)
         self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv2_bn = nn.BatchNorm2d(128)
         self.conv3 = nn.Conv2d(128, 256, 1, padding=0)
+        self.conv3_bn = nn.BatchNorm2d(256)
         self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
+        self.conv4_bn = nn.BatchNorm2d(512)
         self.pool = nn.MaxPool2d(2,2)
         # self.roi_size = 16
         # self.roi = ops.PSRoIAlign((self.roi_size,self.roi_size), 1/16, 2)
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(512*size, 1000)
+        # self.hidden1 = nn.Linear(512*size, 1000)
+        self.dense1_bn = nn.BatchNorm1d(1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
-        self.output = nn.Linear(1000, 22*3)
+        self.output = nn.Linear(512*size, 5*3)
 
         # Dropout module with 0.2 drop probability
-        self.dropout = nn.Dropout(p=0.4)
+        self.dropout = nn.Dropout(p=0.2)
 
     def initialize(self):
         self.hidden1.weight.data.zero_()
@@ -134,10 +143,10 @@ class PositionFinder(nn.Module):
         
     def forward(self, x, details, bboxes):
         #Convolutional layers
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = self.pool(F.relu(self.conv4(x)))
+        x = self.pool(F.relu(self.conv1_bn(self.conv1(x))))
+        x = self.pool(F.relu(self.conv2_bn(self.conv2(x))))
+        x = self.pool(F.relu(self.conv3_bn(self.conv3(x))))
+        x = self.pool(F.relu(self.conv4_bn(self.conv4(x))))
         # rois = []
         # for i in range(len(bboxes)):
         #     rois.append([i, bboxes[i][0]-0.5 * 16, bboxes[i][1]-0.5 * 16, bboxes[i][2]+0.5 * 16, bboxes[i][3]+0.5 * 16])
@@ -155,20 +164,20 @@ class PositionFinder(nn.Module):
         
 
         #Forward pass through the network, returns the output
-        x = self.dropout(F.relu(self.hidden1(x)))
+        # x = self.dropout(F.relu(self.hidden1(x)))
         # x = self.dropout(F.relu(self.hidden2(x)))
         x = self.output(x)
 
         #Bounding boxes
-        for i in range(x.shape[0]):
-            w = (bboxes[i][2] - bboxes[i][0]) * self.img_size
-            h = (bboxes[i][3] - bboxes[i][1]) * self.img_size
-            x[i,0::2] = bboxes[i][0] + x[i,0::2]*(w/self.img_size)
-            x[i,1::2] = bboxes[i][1] + x[i,1::2]*(h/self.img_size)
+        # for i in range(x.shape[0]):
+        #     w = (bboxes[i][2] - bboxes[i][0]) * self.img_size
+        #     h = (bboxes[i][3] - bboxes[i][1]) * self.img_size
+        #     x[i,0::2] = bboxes[i][0] + x[i,0::2]*(w/self.img_size)
+        #     x[i,1::2] = bboxes[i][1] + x[i,1::2]*(h/self.img_size)
 
         #confidences
-        y = x[:,22*2:22*3]
-        x = x[:,:22*2]
+        y = x[:,5*2:5*3]
+        x = x[:,:5*2]
         x = x.view(x.shape[0], -1, 2)
         y = torch.sigmoid(y)
         # y = F.log_softmax(y, dim=1)
@@ -223,19 +232,19 @@ class BoundingBoxFinder(nn.Module):
         return x
 
 def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
+    res = np.copy(output)
     x = bboxes[0] 
     y = bboxes[1]
-    w = (bboxes[2] - x) * img_size # denormalized width of bounding box
-    h = (bboxes[3] - y) * img_size # denormalized height of bounding box
+    w = (bboxes[2] - x) # denormalized width of bounding box
+    h = (bboxes[3] - y) # denormalized height of bounding box
     # print(x * img_size,y * img_size,w,h)
     # print(w,h, "before", output)
-    # print(output.shape)
-    output[0::2] = (output[0::2] - x.item()) * (img_size / w.item())
-    output[1::2] = (output[1::2] - y.item()) * (img_size / h.item())
+    # print("({} - {}) * ({}/{})".format(output[0::2],x.item(),img_size,w.item()))
+    res[0::2] = (res[0::2] - x.item()) / w.item()
+    res[1::2] = (res[1::2] - y.item()) / h.item()
     # print("after", output)
-    output = np.clip(output, 0, 1)
-
-    return output
+    res = np.clip(res, 0, 1)
+    return res
 
 def crop_image(image, x1,y1,x2,y2):
     return image[:,x1:x2,y1:y2]
