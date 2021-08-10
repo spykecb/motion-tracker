@@ -1,0 +1,202 @@
+(base) C:\Users\bihta\pydev\motion-tracker>python boundingbox.py
+[[198.2544  187.5275  193.8472  ... 126.9791  325.932   512.     ]
+ [198.2544  187.5275  193.8472  ... 126.9791  325.932   512.     ]
+ [198.2544  187.5275  193.8472  ... 126.9791  325.932   512.     ]
+ ...
+ [430.1205  289.6315  429.8939  ...  12.2059  512.      444.1738 ]
+ [381.5243  244.1194  380.7819  ...   0.      512.      512.     ]
+ [ 52.16048 265.9853   52.94115 ...  10.84918 188.2889  512.     ]]
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+D:\Users\bihta\anaconda3\lib\site-packages\torch\nn\functional.py:718: UserWarning: Named tensors and all their associated APIs are an experimental feature and subject to change. Please do not use them for anything important until they are released as stable. (Triggered internally at  ..\c10/core/TensorImpl.h:1156.)
+  return torch.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode)
+(Epoch 1/5) Training loss: 3.788792234200698, Test loss: 2.9428679943084717
+(Epoch 2/5) Training loss: 2.714115710653497, Test loss: 2.598846197128296
+(Epoch 3/5) Training loss: 2.4517866610540207, Test loss: 2.426757574081421
+(Epoch 4/5) Training loss: 2.264930467868933, Test loss: 2.439744234085083
+(Epoch 5/5) Training loss: 2.123290476008985, Test loss: 2.2884464263916016
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.644560572898835, Test loss: 2.765247344970703
+(Epoch 2/5) Training loss: 2.6197618657550397, Test loss: 2.52826189994812
+(Epoch 3/5) Training loss: 2.3699182080329053, Test loss: 2.3485705852508545
+(Epoch 4/5) Training loss: 2.166083497408579, Test loss: 2.2800164222717285
+(Epoch 5/5) Training loss: 2.037586023116253, Test loss: 2.0743868350982666
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 4.862170840626402, Test loss: 2.847524881362915
+(Epoch 2/5) Training loss: 3.60014841871619, Test loss: 2.6166274547576904
+(Epoch 3/5) Training loss: 3.218073777663402, Test loss: 2.5779216289520264
+(Epoch 4/5) Training loss: 2.9509667894073726, Test loss: 2.356229543685913
+(Epoch 5/5) Training loss: 2.770837223271176, Test loss: 2.292210340499878
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 5.029448975002507, Test loss: 3.083854913711548
+(Epoch 2/5) Training loss: 3.3350674137326153, Test loss: 2.725261688232422
+(Epoch 3/5) Training loss: 2.951212607897245, Test loss: 2.985399007797241
+(Epoch 4/5) Training loss: 2.733451678672956, Test loss: 2.480583667755127
+(Epoch 5/5) Training loss: 2.5852417868269972, Test loss: 2.468212604522705
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 4.062866645922087, Test loss: 3.234959125518799
+(Epoch 2/5) Training loss: 2.8396878762122912, Test loss: 2.586313009262085
+(Epoch 3/5) Training loss: 2.495113972376084, Test loss: 2.421492338180542
+(Epoch 4/5) Training loss: 2.2761655615631646, Test loss: 2.413194417953491
+(Epoch 5/5) Training loss: 2.1502967362808287, Test loss: 2.2521464824676514
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.5661277105587237, Test loss: 2.7953317165374756
+(Epoch 2/5) Training loss: 2.569042185354515, Test loss: 2.494420289993286
+(Epoch 3/5) Training loss: 2.25139508444882, Test loss: 2.272026300430298
+(Epoch 4/5) Training loss: 2.0283372745476296, Test loss: 2.057852029800415
+(Epoch 5/5) Training loss: 1.8871599946031439, Test loss: 1.9202334880828857
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 4.778291016170495, Test loss: 2.8799381256103516
+(Epoch 2/5) Training loss: 3.5062352298984867, Test loss: 2.449810743331909
+(Epoch 3/5) Training loss: 3.0472567723347592, Test loss: 2.3856396675109863
+(Epoch 4/5) Training loss: 2.774931608807641, Test loss: 2.5070691108703613
+(Epoch 5/5) Training loss: 2.5491130960998687, Test loss: 2.353759288787842
+{'learning': 0.0002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 4.042714101087882, Test loss: 3.188002824783325
+(Epoch 2/5) Training loss: 2.9479309021838787, Test loss: 2.355668783187866
+(Epoch 3/5) Training loss: 2.638003021302308, Test loss: 2.2921061515808105
+(Epoch 4/5) Training loss: 2.390314204453011, Test loss: 2.1601932048797607
+(Epoch 5/5) Training loss: 2.2876344883935693, Test loss: 1.999260663986206
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.7666515055492784, Test loss: 2.4813764095306396
+(Epoch 2/5) Training loss: 2.4700230425866634, Test loss: 2.252464771270752
+(Epoch 3/5) Training loss: 2.1029039985799693, Test loss: 2.218540906906128
+(Epoch 4/5) Training loss: 1.9160601407348288, Test loss: 1.9683514833450317
+(Epoch 5/5) Training loss: 1.7348219811093408, Test loss: 2.043307065963745
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.704024228588834, Test loss: 2.9474213123321533
+(Epoch 2/5) Training loss: 2.4749196586759368, Test loss: 2.257169485092163
+(Epoch 3/5) Training loss: 2.1157503120997956, Test loss: 2.052117347717285
+(Epoch 4/5) Training loss: 1.8590057263007531, Test loss: 2.156048059463501
+(Epoch 5/5) Training loss: 1.6960658540387126, Test loss: 1.8365339040756226
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 4.591146842967829, Test loss: 2.556159019470215
+(Epoch 2/5) Training loss: 2.9080134658418464, Test loss: 2.285419225692749
+(Epoch 3/5) Training loss: 2.433757750945684, Test loss: 2.289841890335083
+(Epoch 4/5) Training loss: 2.1825186409188446, Test loss: 1.9518847465515137
+(Epoch 5/5) Training loss: 2.0367424901890803, Test loss: 2.089883804321289
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 4.150167053502927, Test loss: 2.7752420902252197
+(Epoch 2/5) Training loss: 2.7257467618825637, Test loss: 2.4291558265686035
+(Epoch 3/5) Training loss: 2.3108531904408682, Test loss: 2.1362459659576416
+(Epoch 4/5) Training loss: 2.088308223135608, Test loss: 2.0308685302734375
+(Epoch 5/5) Training loss: 1.9116331437635703, Test loss: 1.9134371280670166
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.6881137764195246, Test loss: 2.7686567306518555
+(Epoch 2/5) Training loss: 2.348792885182172, Test loss: 2.198489189147949
+(Epoch 3/5) Training loss: 1.9951868421697523, Test loss: 2.041552782058716
+(Epoch 4/5) Training loss: 1.7816270040807405, Test loss: 1.8297210931777954
+(Epoch 5/5) Training loss: 1.6113627303751732, Test loss: 1.8537653684616089
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.817805292338309, Test loss: 2.550957441329956
+(Epoch 2/5) Training loss: 2.4158112694760985, Test loss: 2.812795639038086
+(Epoch 3/5) Training loss: 2.0087505339165412, Test loss: 2.179921865463257
+(Epoch 4/5) Training loss: 1.7641455988441934, Test loss: 1.9210736751556396
+(Epoch 5/5) Training loss: 1.5609489821588265, Test loss: 1.8174883127212524
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 4.672499598836052, Test loss: 2.576071262359619
+(Epoch 2/5) Training loss: 2.7815714688931226, Test loss: 2.417814254760742
+(Epoch 3/5) Training loss: 2.3471030074463792, Test loss: 2.030203342437744
+(Epoch 4/5) Training loss: 2.154163356128294, Test loss: 1.9262313842773438
+(Epoch 5/5) Training loss: 2.0126308153366903, Test loss: 1.859467625617981
+{'learning': 0.0007, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.998420087308338, Test loss: 2.7688913345336914
+(Epoch 2/5) Training loss: 2.5699015686497884, Test loss: 2.504556894302368
+(Epoch 3/5) Training loss: 2.1455067979278413, Test loss: 1.9721920490264893
+(Epoch 4/5) Training loss: 1.9127967148372642, Test loss: 1.8300302028656006
+(Epoch 5/5) Training loss: 1.7424369081707867, Test loss: 1.8607265949249268
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.6015093291299585, Test loss: 2.2702572345733643
+(Epoch 2/5) Training loss: 2.0083057515955067, Test loss: 1.9056015014648438
+(Epoch 3/5) Training loss: 1.7170755530485269, Test loss: 1.7808109521865845
+(Epoch 4/5) Training loss: 1.489783660899958, Test loss: 1.6671719551086426
+(Epoch 5/5) Training loss: 1.3440151714244069, Test loss: 1.6902565956115723
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.7406396767091468, Test loss: 2.2710883617401123
+(Epoch 2/5) Training loss: 2.0154930391960595, Test loss: 2.0777177810668945
+(Epoch 3/5) Training loss: 1.6818970367753294, Test loss: 1.7404518127441406
+(Epoch 4/5) Training loss: 1.504972870533283, Test loss: 1.6079895496368408
+(Epoch 5/5) Training loss: 1.35002129811507, Test loss: 1.559134840965271
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.8461168959766217, Test loss: 2.628810167312622
+(Epoch 2/5) Training loss: 2.3571703184756068, Test loss: 2.2248404026031494
+(Epoch 3/5) Training loss: 2.1306150568542632, Test loss: 1.982800841331482
+(Epoch 4/5) Training loss: 1.9627461588594335, Test loss: 1.8034247159957886
+(Epoch 5/5) Training loss: 1.8755112324475771, Test loss: 1.744576096534729
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.637063706885193, Test loss: 2.3043711185455322
+(Epoch 2/5) Training loss: 2.0855378194673526, Test loss: 1.9559234380722046
+(Epoch 3/5) Training loss: 1.834030273162872, Test loss: 1.767021894454956
+(Epoch 4/5) Training loss: 1.6679647521389542, Test loss: 1.6820021867752075
+(Epoch 5/5) Training loss: 1.5712250433494823, Test loss: 1.7259573936462402
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.5197734813953527, Test loss: 2.2158172130584717
+(Epoch 2/5) Training loss: 1.9658165779809744, Test loss: 1.9223272800445557
+(Epoch 3/5) Training loss: 1.6532178846806935, Test loss: 1.8111494779586792
+(Epoch 4/5) Training loss: 1.433530575189835, Test loss: 1.6728711128234863
+(Epoch 5/5) Training loss: 1.267558863177102, Test loss: 1.7337760925292969
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.4020070912099682, Test loss: 2.1759538650512695
+(Epoch 2/5) Training loss: 1.8543958457028842, Test loss: 1.8167463541030884
+(Epoch 3/5) Training loss: 1.5517583464729716, Test loss: 1.6617729663848877
+(Epoch 4/5) Training loss: 1.347896831745697, Test loss: 1.7263150215148926
+(Epoch 5/5) Training loss: 1.1853215640348325, Test loss: 1.5986131429672241
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.7166812071903688, Test loss: 2.2314672470092773
+(Epoch 2/5) Training loss: 2.248291659637316, Test loss: 1.9355220794677734
+(Epoch 3/5) Training loss: 2.013467843951088, Test loss: 1.8121814727783203
+(Epoch 4/5) Training loss: 1.8802899657151637, Test loss: 1.7247333526611328
+(Epoch 5/5) Training loss: 1.7722444346200315, Test loss: 1.7511099576950073
+{'learning': 0.002, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.440792274663199, Test loss: 2.1061782836914062
+(Epoch 2/5) Training loss: 2.0653153697884763, Test loss: 1.9283263683319092
+(Epoch 3/5) Training loss: 1.7928403099848205, Test loss: 1.8027396202087402
+(Epoch 4/5) Training loss: 1.6337382925097523, Test loss: 1.7282342910766602
+(Epoch 5/5) Training loss: 1.5082071668062456, Test loss: 1.6475956439971924
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.3062368525555854, Test loss: 2.392958879470825
+(Epoch 2/5) Training loss: 1.9361159886128805, Test loss: 1.9225728511810303
+(Epoch 3/5) Training loss: 1.6488150741456764, Test loss: 1.668723702430725
+(Epoch 4/5) Training loss: 1.450726558470867, Test loss: 1.7903038263320923
+(Epoch 5/5) Training loss: 1.294741931516508, Test loss: 1.7935791015625
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.612053308966597, Test loss: 2.335439443588257
+(Epoch 2/5) Training loss: 2.004931886990865, Test loss: 1.9181396961212158
+(Epoch 3/5) Training loss: 1.709149487507649, Test loss: 1.6758973598480225
+(Epoch 4/5) Training loss: 1.4937822700017067, Test loss: 1.654201865196228
+(Epoch 5/5) Training loss: 1.3402695205554924, Test loss: 1.6462500095367432
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.503404035370731, Test loss: 2.35807466506958
+(Epoch 2/5) Training loss: 2.280140429088585, Test loss: 1.9588384628295898
+(Epoch 3/5) Training loss: 2.0747774935803234, Test loss: 1.7979583740234375
+(Epoch 4/5) Training loss: 1.9169729114519303, Test loss: 1.915595293045044
+(Epoch 5/5) Training loss: 1.811028589863749, Test loss: 1.609645962715149
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 4.577466600745387, Test loss: 2.526994466781616
+(Epoch 2/5) Training loss: 2.3021650562389833, Test loss: 2.2013025283813477
+(Epoch 3/5) Training loss: 1.9560616259744181, Test loss: 2.028691291809082
+(Epoch 4/5) Training loss: 1.7518439840753168, Test loss: 1.8197442293167114
+(Epoch 5/5) Training loss: 1.6185367856270227, Test loss: 1.7323732376098633
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.3412384497813687, Test loss: 2.340447425842285
+(Epoch 2/5) Training loss: 2.0055595224895892, Test loss: 2.0140414237976074
+(Epoch 3/5) Training loss: 1.6980692562031794, Test loss: 1.7966922521591187
+(Epoch 4/5) Training loss: 1.4949331680933635, Test loss: 1.6696738004684448
+(Epoch 5/5) Training loss: 1.338891061452719, Test loss: 1.6419715881347656
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.1222677649360673, Test loss: 2.1645193099975586
+(Epoch 2/5) Training loss: 1.8517450559774093, Test loss: 1.893880009651184
+(Epoch 3/5) Training loss: 1.5752266451451906, Test loss: 1.755732774734497
+(Epoch 4/5) Training loss: 1.3622717422376254, Test loss: 1.6658169031143188
+(Epoch 5/5) Training loss: 1.201348374581196, Test loss: 1.6572922468185425
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/5) Training loss: 3.624396632879208, Test loss: 2.2265267372131348
+(Epoch 2/5) Training loss: 2.371877721545729, Test loss: 1.9532164335250854
+(Epoch 3/5) Training loss: 2.0871546715204063, Test loss: 1.8401120901107788
+(Epoch 4/5) Training loss: 1.9596667642424093, Test loss: 1.7331480979919434
+(Epoch 5/5) Training loss: 1.8434478714621279, Test loss: 1.8133808374404907
+{'learning': 0.004, 'conv1_c': 8, 'conv1_bn': True, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 512}
+(Epoch 1/5) Training loss: 3.4748356925430146, Test loss: 2.1173477172851562
+(Epoch 2/5) Training loss: 2.078374506688917, Test loss: 1.9199492931365967
+(Epoch 3/5) Training loss: 1.8493677057928353, Test loss: 1.715955376625061
+(Epoch 4/5) Training loss: 1.6443905810397523, Test loss: 1.607372522354126
+(Epoch 5/5) Training loss: 1.543606056146603, Test loss: 1.7430533170700073

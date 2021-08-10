@@ -63,11 +63,11 @@ class MotionDataset(Dataset):
 
         #finding bounding box
         if self.bmodel is not None:
-            # orig_img = transforms.ToTensor()(image).view(-1, 3, self.img_size,self.img_size)
-            # bbox_output = self.bmodel.forward(orig_img.to('cuda'))[0]
+            orig_img = transforms.ToTensor()(image).view(-1, 3, self.img_size,self.img_size)
+            bbox_output = self.bmodel.forward(orig_img.to('cuda'))[0]
 
             # CHEATING
-            bbox_output = boundaries
+            # bbox_output = boundaries
             rect = tuple(int(b * 512) for b in bbox_output)
             image = image.crop(rect)
             pass
@@ -82,7 +82,7 @@ class MotionDataset(Dataset):
         inp["bboxes"] = np.array([])
         if self.bmodel is not None:
             inp["bboxes"] = bbox_output
-            # positions = align_targets_in_bounding_boxes(positions, bbox_output, 256)
+            positions = align_targets_in_bounding_boxes(positions, bbox_output, 256)
             pass
         output = {}
         # output["positions"] =  positions
@@ -140,27 +140,13 @@ class PositionFinder(nn.Module):
         self.conv4.bias.data.zero_()
         self.output.weight.data.zero_()
         self.output.bias.data.zero_()
-        pass
         
     def forward(self, x, details, bboxes):
-        #Convolutional layers
+        # Convolutional layers
         x = self.conv1_bn(F.relu(self.pool(self.conv1(x))))
         x = F.relu(self.pool(self.conv2(x)))
         x = F.relu(self.pool(self.conv3(x)))
         x = F.relu(self.pool(self.conv4(x)))
-        # x = self.pool(F.relu(self.conv1(x)))
-        # x = self.pool(F.relu(self.conv2(x)))
-        # x = self.pool(F.relu(self.conv3(x)))
-        # x = self.pool(F.relu(self.conv4(x)))
-
-
-        # rois = []
-        # for i in range(len(bboxes)):
-        #     rois.append([i, bboxes[i][0]-0.5 * 16, bboxes[i][1]-0.5 * 16, bboxes[i][2]+0.5 * 16, bboxes[i][3]+0.5 * 16])
-        # rois = torch.Tensor(rois).to('cuda')
-        # print("before", x[0])
-        # x = F.relu(self.roi(x, rois))
-        # print("after", x[0])
 
         # make sure input tensor is flattened
         # torch.Size([16, 512, 16, 16])
@@ -176,13 +162,6 @@ class PositionFinder(nn.Module):
         # x = self.dropout(F.relu(self.hidden2(x)))
         x = self.output(x)
 
-        #Bounding boxes
-        for i in range(x.shape[0]):
-            w = (bboxes[i][2] - bboxes[i][0]) * self.img_size
-            h = (bboxes[i][3] - bboxes[i][1]) * self.img_size
-            x[i,0::2] = bboxes[i][0] + x[i,0::2]*(w/self.img_size)
-            x[i,1::2] = bboxes[i][1] + x[i,1::2]*(h/self.img_size)
-
         #confidences
         # y = x[:,5*2:5*3]
         # x = x[:,:5*2]
@@ -192,25 +171,27 @@ class PositionFinder(nn.Module):
         return x
 
 class BoundingBoxFinder(nn.Module):
-    def __init__(self, img_size):
+    def __init__(self, img_size, param):
         super().__init__()
         self.img_size = img_size
+        self.param = param
         #defining the layers here
 
         #Convolutional layers
-        self.conv1 = nn.Conv2d(3, 64, 1, padding=1)
-        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, param["conv1_c"], 1, padding=0)
+        self.conv1_bn = nn.BatchNorm2d(param["conv1_c"])
+        self.conv2 = nn.Conv2d(param["conv1_c"], param["conv2_c"], 3, padding=1)
+        self.conv3 = nn.Conv2d(param["conv2_c"], param["conv3_c"], 3, padding=1)
         self.pool = nn.MaxPool2d(2,2)
 
         size = self.img_size//8 * self.img_size//8
         #Linear layers
-        self.hidden1 = nn.Linear(256*size, 512)
+        self.hidden1 = nn.Linear(param["conv3_c"]*size, param["hidden"])
         # self.hidden2 = nn.Linear(1000, 500)
-        self.output = nn.Linear(512, 4)
+        self.output = nn.Linear(param["hidden"], 4)
 
         # Dropout module with 0.2 drop probability
-        self.dropout = nn.Dropout(p=0.4)
+        self.dropout = nn.Dropout(p=param["drop"])
 
     def initialize(self):
         self.hidden1.weight.data.zero_()
@@ -226,17 +207,20 @@ class BoundingBoxFinder(nn.Module):
         
     def forward(self, x):
         #Convolutional layers
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
+        x = F.relu(self.pool(self.conv1(x)))
+        if self.param["conv1_bn"]:
+            x = self.conv1_bn(x)
+        x = F.relu(self.pool(self.conv2(x)))
+        x = F.relu(self.pool(self.conv3(x)))
 
         # make sure input tensor is flattened
         size = self.img_size//8 * self.img_size//8
-        x = x.view(-1, 256*size)
+        x = x.view(-1, self.param["conv3_c"]*size)
 
         #Forward pass through the network, returns the output
         x = self.dropout(F.relu(self.hidden1(x)))
         x = self.output(x)
+        
         return x
 
 def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
@@ -254,6 +238,27 @@ def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
     res = np.clip(res, 0, 1)
     return res
 
+
 def crop_image(image, x1,y1,x2,y2):
     return image[:,x1:x2,y1:y2]
 
+def my_loss(output, target):
+    #mseloss (x - y) ^ 2
+    #l1loss abs(x - y) 
+#     output_2d = np.reshape(output, (-1, 2))
+#     target_2d = np.reshape(target, (-1, 2))
+
+
+    loss = torch.linalg.norm(output - target)
+#     loss = torch.dist(output,target) # <---- result seemed quite good, and again with non cropped ones!
+
+#     x = np.reshape(output.detach().cpu(), (-1, 2))
+#     y = np.reshape(target.detach().cpu(), (-1, 2))
+#     loss = torch.diag(torch.cdist(x,y)).mean()
+
+#     loss = 0
+#     for i in range(output.shape[0]):
+#         for j in range(0, output.shape[1]):
+#             loss += (torch.linalg.norm(output[i][j] - target[i][j]))
+#     loss = loss / (output.shape[0] * output.shape[1])
+    return loss

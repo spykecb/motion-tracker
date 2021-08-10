@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import math
+import torch
 from torch import nn, optim
 from torch.autograd import Variable
 
@@ -18,7 +19,7 @@ def encode(x):
         print(res)
     return res        
 
-def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[], xdata_e=[], ydata_e=[]):
+def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[], xdata_e=[], ydata_e=[], bboxes=None):
     """Imshow for Tensor."""
     if ax is None:
         fig, ax = plt.subplots()
@@ -69,7 +70,16 @@ def get_minmax(train_path, test_path):
 
     return (minval, maxval), (minval_z, maxval_z)
 
-def evaluate_model(input):
+def evaluate_result(logps):
+    for body_index in range(5):
+        xyz = []
+        xyz_e = []
+        for pos_index in range(2):
+            xyz.append(logps_denormalized[0][body_index][pos_index])
+        positions.append(xyz)
+    return positions
+
+def evaluate_model(model, input):
     positions = []
     # Turn off gradients to speed up this part
     with torch.no_grad():
@@ -77,21 +87,12 @@ def evaluate_model(input):
             inp[k] = inp[k].to('cpu')
         
         logps = model.forward(inp["images"], inp["details"], inp["bboxes"])
-        logps_denormalized = logps 
-        print(logps.shape)
-        
-        for body_index in range(5):
-            xyz = []
-            xyz_e = []
-            for pos_index in range(2):
-                xyz.append(logps_denormalized[0][body_index][pos_index])
-            positions.append(xyz)
-    #     print(list(model.parameters()))
+        positions = evaluate_result(logps)
 
     positions = np.array(positions)
     return positions
 
-def evaluate_model(input, expected):
+def evaluate_model(model, inp, expected):
     positions = []
     positions_expected = []
     # Turn off gradients to speed up this part
@@ -118,7 +119,7 @@ def evaluate_model(input, expected):
 
     positions = np.array(positions)
     positions_expected = np.array(positions_expected)
-    return positions_expected
+    return positions, positions_expected
 
 
 def get_label(i):
@@ -135,3 +136,4 @@ def get_label(i):
         label = "RightFoot"
 
     return label
+

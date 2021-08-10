@@ -1,6 +1,6 @@
 import cv2
 import torch
-from model import PositionFinder
+from model import PositionFinder, BoundingBoxFinder
 import helper
 import numpy as np
 import time
@@ -10,8 +10,11 @@ vid = cv2.VideoCapture(0)
 img_width = 256
 device = 'cuda'
 model = PositionFinder(img_width)
+bmodel = BoundingBoxFinder(img_width)
 model.load_state_dict(torch.load('model.m'))
+bmodel.load_state_dict(torch.load('bmodel.m'))
 model.to(device)
+bmodel.to(device)
 details = torch.Tensor([[0.9,1]])
 bboxes = torch.Tensor([0.0, 0.0, 1.0, 1.0])
 mean = [0.485, 0.456, 0.406]
@@ -27,7 +30,6 @@ while(True):
     # Capture the video frame
     # by frame
     ret, frame = vid.read()
-    print(frame.shape)
 
     if ret == True:
         crop_from = (frame.shape[1] - frame.shape[0]) // 2
@@ -53,8 +55,10 @@ while(True):
         positions_expected = []
         
         with torch.no_grad():
-            images, details, bboxes = images.to(device), details.to(device), bboxes.to(device)
+            images, details = images.to(device), details.to(device)
             
+            bboxes = bmodel.forward(images)
+            print(bboxes)
             logps = model.forward(images, details, bboxes)
             logps_denormalized = logps 
             for body_index in range(5):
@@ -72,12 +76,19 @@ while(True):
         # quitting button you may use any
         # desired button of your choice
 
+        for i, bbox in enumerate(bboxes):
+            x1 = int(bbox[0].item())
+            y1 = int(bbox[1].item())
+            x2 = int(bbox[2].item())
+            y2 = int(bbox[3].item())
+            frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255,0,0), 2)
+
         for i, pos in enumerate(positions):
             # x = int(pos[0].item() // (512/frame.shape[0]))
             # y = int(pos[1].item() // (512/frame.shape[1]))
             x = int(pos[0].item())
             y = int(pos[1].item())
-            print(x,y, pos)
+            # print(x,y, pos)
             frame = cv2.circle(frame, (x,y), radius=10, color=(0, 0, 255), thickness=-1)
             frame = cv2.putText(frame, helper.get_label(i), (x,y), color=(0, 0, 255), fontFace=font, fontScale=1, thickness=2)
 
