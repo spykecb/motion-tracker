@@ -68,8 +68,8 @@ class MotionDataset(Dataset):
 
             # CHEATING
             bbox_output = boundaries
-            # rect = tuple(int(b * 512) for b in bbox_output)
-            # image = image.crop(rect)
+            rect = tuple(int(b * 512) for b in bbox_output)
+            image = image.crop(rect)
             pass
         
         if self.transforms:
@@ -85,6 +85,7 @@ class MotionDataset(Dataset):
             # positions = align_targets_in_bounding_boxes(positions, bbox_output, 256)
             pass
         output = {}
+        # output["positions"] =  positions
         output["positions"] =  positions.reshape(-1,2)
         output["confidences"] = confidences
         output["boundaries"] = boundaries
@@ -101,25 +102,25 @@ class PositionFinder(nn.Module):
         #defining the layers here
 
         #Convolutional layers
-        self.conv1 = nn.Conv2d(3, 64, 1, padding=0)
-        self.conv1_bn = nn.BatchNorm2d(64)
-        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv2_bn = nn.BatchNorm2d(128)
-        self.conv3 = nn.Conv2d(128, 256, 1, padding=0)
-        self.conv3_bn = nn.BatchNorm2d(256)
-        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
-        self.conv4_bn = nn.BatchNorm2d(512)
+        self.conv1 = nn.Conv2d(3, 16, 1, padding=0)
+        self.conv1_bn = nn.BatchNorm2d(16)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+        self.conv2_bn = nn.BatchNorm2d(32)
+        self.conv3 = nn.Conv2d(32, 64, 1, padding=0)
+        self.conv3_bn = nn.BatchNorm2d(64)
+        self.conv4 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv4_bn = nn.BatchNorm2d(128)
         self.pool = nn.MaxPool2d(2,2)
         # self.roi_size = 16
         # self.roi = ops.PSRoIAlign((self.roi_size,self.roi_size), 1/16, 2)
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        # self.hidden1 = nn.Linear(512*size, 1000)
+        self.hidden1 = nn.Linear(128*size + 2, 500)
         self.dense1_bn = nn.BatchNorm1d(1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
-        self.output = nn.Linear(512*size, 5*3)
+        self.output = nn.Linear(500, 5*2)
 
         # Dropout module with 0.2 drop probability
         self.dropout = nn.Dropout(p=0.2)
@@ -143,10 +144,16 @@ class PositionFinder(nn.Module):
         
     def forward(self, x, details, bboxes):
         #Convolutional layers
-        x = self.pool(F.relu(self.conv1_bn(self.conv1(x))))
-        x = self.pool(F.relu(self.conv2_bn(self.conv2(x))))
-        x = self.pool(F.relu(self.conv3_bn(self.conv3(x))))
-        x = self.pool(F.relu(self.conv4_bn(self.conv4(x))))
+        x = self.conv1_bn(F.relu(self.pool(self.conv1(x))))
+        x = F.relu(self.pool(self.conv2(x)))
+        x = F.relu(self.pool(self.conv3(x)))
+        x = F.relu(self.pool(self.conv4(x)))
+        # x = self.pool(F.relu(self.conv1(x)))
+        # x = self.pool(F.relu(self.conv2(x)))
+        # x = self.pool(F.relu(self.conv3(x)))
+        # x = self.pool(F.relu(self.conv4(x)))
+
+
         # rois = []
         # for i in range(len(bboxes)):
         #     rois.append([i, bboxes[i][0]-0.5 * 16, bboxes[i][1]-0.5 * 16, bboxes[i][2]+0.5 * 16, bboxes[i][3]+0.5 * 16])
@@ -158,30 +165,31 @@ class PositionFinder(nn.Module):
         # make sure input tensor is flattened
         # torch.Size([16, 512, 16, 16])
         size = self.img_size//16 * self.img_size//16
-        x = x.view(-1, 512*size)
+        x = x.view(-1, 128*size)
         # x = x.view(-1, 512//(self.roi_size*self.roi_size)*size)
+        x = torch.cat((x,details), dim = 1)
         # x = torch.cat((x,details, bboxes), dim = 1)
         
 
         #Forward pass through the network, returns the output
-        # x = self.dropout(F.relu(self.hidden1(x)))
+        x = self.dropout(F.relu(self.hidden1(x)))
         # x = self.dropout(F.relu(self.hidden2(x)))
         x = self.output(x)
 
         #Bounding boxes
-        # for i in range(x.shape[0]):
-        #     w = (bboxes[i][2] - bboxes[i][0]) * self.img_size
-        #     h = (bboxes[i][3] - bboxes[i][1]) * self.img_size
-        #     x[i,0::2] = bboxes[i][0] + x[i,0::2]*(w/self.img_size)
-        #     x[i,1::2] = bboxes[i][1] + x[i,1::2]*(h/self.img_size)
+        for i in range(x.shape[0]):
+            w = (bboxes[i][2] - bboxes[i][0]) * self.img_size
+            h = (bboxes[i][3] - bboxes[i][1]) * self.img_size
+            x[i,0::2] = bboxes[i][0] + x[i,0::2]*(w/self.img_size)
+            x[i,1::2] = bboxes[i][1] + x[i,1::2]*(h/self.img_size)
 
         #confidences
-        y = x[:,5*2:5*3]
-        x = x[:,:5*2]
+        # y = x[:,5*2:5*3]
+        # x = x[:,:5*2]
         x = x.view(x.shape[0], -1, 2)
-        y = torch.sigmoid(y)
+        # y = torch.sigmoid(y)
         # y = F.log_softmax(y, dim=1)
-        return x, y
+        return x
 
 class BoundingBoxFinder(nn.Module):
     def __init__(self, img_size):

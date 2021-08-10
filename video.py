@@ -1,6 +1,7 @@
 import cv2
 import torch
 from model import PositionFinder
+import helper
 import numpy as np
 import time
 from torchvision import transforms
@@ -8,12 +9,14 @@ vid = cv2.VideoCapture(0)
 
 img_width = 256
 device = 'cuda'
-model = PositionFinder(img_width, device)
+model = PositionFinder(img_width)
 model.load_state_dict(torch.load('model.m'))
 model.to(device)
 details = torch.Tensor([[0.9,1]])
+bboxes = torch.Tensor([0.0, 0.0, 1.0, 1.0])
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
+font = cv2.FONT_HERSHEY_SIMPLEX
 
 minval, maxval = 0, 512
 
@@ -24,6 +27,7 @@ while(True):
     # Capture the video frame
     # by frame
     ret, frame = vid.read()
+    print(frame.shape)
 
     if ret == True:
         crop_from = (frame.shape[1] - frame.shape[0]) // 2
@@ -49,14 +53,15 @@ while(True):
         positions_expected = []
         
         with torch.no_grad():
-            images, details = images.to(device), details.to(device)
-            logps = model.forward(images, details)
+            images, details, bboxes = images.to(device), details.to(device), bboxes.to(device)
+            
+            logps = model.forward(images, details, bboxes)
             logps_denormalized = logps 
-            for body_index in range(22):
+            for body_index in range(5):
                 xyz = []
                 xyz_e = []
                 for pos_index in range(2):
-                    pos = logps_denormalized[0][body_index*2+pos_index]
+                    pos = logps_denormalized[0][body_index][pos_index]
                     pos = pos * (maxval - minval) + minval
 
                     xyz.append(pos)
@@ -67,10 +72,14 @@ while(True):
         # quitting button you may use any
         # desired button of your choice
 
-        for pos in positions:
-            x = int(pos[0].item() // (512/frame.shape[0]))
-            y = int(frame.shape[1] - pos[1].item() / (512/frame.shape[1]))
+        for i, pos in enumerate(positions):
+            # x = int(pos[0].item() // (512/frame.shape[0]))
+            # y = int(pos[1].item() // (512/frame.shape[1]))
+            x = int(pos[0].item())
+            y = int(pos[1].item())
+            print(x,y, pos)
             frame = cv2.circle(frame, (x,y), radius=10, color=(0, 0, 255), thickness=-1)
+            frame = cv2.putText(frame, helper.get_label(i), (x,y), color=(0, 0, 255), fontFace=font, fontScale=1, thickness=2)
 
         counter+=1
         if (time.time() - start_time) > fps_update :
@@ -93,3 +102,4 @@ while(True):
 vid.release()
 # Destroy all the windows
 cv2.destroyAllWindows()
+

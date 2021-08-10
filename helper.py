@@ -16,10 +16,9 @@ def encode(x):
         p = prime_numbers[i]
         res += p ** a 
         print(res)
-    return res
-        
+    return res        
 
-def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[]):
+def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[], xdata_e=[], ydata_e=[]):
     """Imshow for Tensor."""
     if ax is None:
         fig, ax = plt.subplots()
@@ -33,6 +32,7 @@ def imshow(image, ax=None, title=None, normalize=True, xdata=[], ydata=[]):
 
     ax.imshow(image)
     ax.scatter(xdata * 256, [y*256 for y in ydata], color='red', s=100)
+    ax.scatter(xdata_e * 256, [y*256 for y in ydata_e], color='green', s=50)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
@@ -68,3 +68,70 @@ def get_minmax(train_path, test_path):
     minval_z = min(train_csv.iloc[:, helper_arr].to_numpy().min(), test_csv.iloc[:, helper_arr].to_numpy().min())
 
     return (minval, maxval), (minval_z, maxval_z)
+
+def evaluate_model(input):
+    positions = []
+    # Turn off gradients to speed up this part
+    with torch.no_grad():
+        for k in inp:
+            inp[k] = inp[k].to('cpu')
+        
+        logps = model.forward(inp["images"], inp["details"], inp["bboxes"])
+        logps_denormalized = logps 
+        print(logps.shape)
+        
+        for body_index in range(5):
+            xyz = []
+            xyz_e = []
+            for pos_index in range(2):
+                xyz.append(logps_denormalized[0][body_index][pos_index])
+            positions.append(xyz)
+    #     print(list(model.parameters()))
+
+    positions = np.array(positions)
+    return positions
+
+def evaluate_model(input, expected):
+    positions = []
+    positions_expected = []
+    # Turn off gradients to speed up this part
+    with torch.no_grad():
+        for k in inp:
+            inp[k] = inp[k].to('cpu')
+        for k in expected:
+            expected[k] = expected[k].to('cpu')
+        
+        logps = model.forward(inp["images"], inp["details"], inp["bboxes"])
+        logps_denormalized = logps 
+        labels_denormalized = expected["positions"]
+        print(logps.shape)
+        
+        for body_index in range(5):
+            xyz = []
+            xyz_e = []
+            for pos_index in range(2):
+                xyz.append(logps_denormalized[0][body_index][pos_index])
+                xyz_e.append(labels_denormalized[0][body_index][pos_index])
+            positions.append(xyz)
+            positions_expected.append(xyz_e)
+    #     print(list(model.parameters()))
+
+    positions = np.array(positions)
+    positions_expected = np.array(positions_expected)
+    return positions_expected
+
+
+def get_label(i):
+    label = ""
+    if i == 0:
+        label = "Head"
+    elif i == 1:
+        label = "LeftHand"
+    elif i == 2:
+        label = "RightHand"
+    elif i == 3:
+        label = "LeftFoot"
+    elif i == 4:
+        label = "RightFoot"
+
+    return label
