@@ -1,3 +1,13 @@
+params = {
+    'learning' : [0.0002, 0.0007, 0.002, 0.004],
+    'conv1_c' : [8],
+    'conv1_bn' : [False, True],
+    'conv2_c' : [16],
+    'conv3_c' : [32],
+    'drop' : [0, 0.4],
+    'hidden' : [128, 512]
+} 
+
 (base) C:\Users\bihta\pydev\motion-tracker>python boundingbox.py
 [[198.2544  187.5275  193.8472  ... 126.9791  325.932   512.     ]
  [198.2544  187.5275  193.8472  ... 126.9791  325.932   512.     ]
@@ -200,3 +210,13 @@ D:\Users\bihta\anaconda3\lib\site-packages\torch\nn\functional.py:718: UserWarni
 (Epoch 3/5) Training loss: 1.8493677057928353, Test loss: 1.715955376625061
 (Epoch 4/5) Training loss: 1.6443905810397523, Test loss: 1.607372522354126
 (Epoch 5/5) Training loss: 1.543606056146603, Test loss: 1.7430533170700073
+
+{'epochs': 8, 'learning': 0.004, 'conv1_c': 8, 'conv1_bn': False, 'conv2_c': 16, 'conv3_c': 32, 'drop': 0.4, 'hidden': 128}
+(Epoch 1/8) Training loss: 3.696408507856862, Test loss: 2.1903433799743652
+(Epoch 2/8) Training loss: 2.3485967489859525, Test loss: 1.977576494216919
+(Epoch 3/8) Training loss: 2.1340591057517826, Test loss: 2.099978446960449
+(Epoch 4/8) Training loss: 1.9558228280182186, Test loss: 1.7397019863128662
+(Epoch 5/8) Training loss: 1.8409034345276962, Test loss: 1.6759033203125
+(Epoch 6/8) Training loss: 1.7776563880006238, Test loss: 1.7704980373382568
+(Epoch 7/8) Training loss: 1.6882383423679208, Test loss: 1.7020951509475708
+(Epoch 8/8) Training loss: 1.6265170306143677, Test loss: 1.5764646530151367

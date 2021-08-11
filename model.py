@@ -50,7 +50,7 @@ class MotionDataset(Dataset):
 
         # #normalization
         positions = (positions - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
-        boundaries = boundaries / 512.0
+        boundaries = boundaries / self.img_size
 
         # TODO: input positions have inverted y (lower left = (0,0)), it should be upper left
         positions = np.array(positions)
@@ -63,11 +63,11 @@ class MotionDataset(Dataset):
 
         #finding bounding box
         if self.bmodel is not None:
-            orig_img = transforms.ToTensor()(image).view(-1, 3, self.img_size,self.img_size)
-            bbox_output = self.bmodel.forward(orig_img.to('cuda'))[0]
+            # orig_img = transforms.ToTensor()(image).view(-1, 3, self.img_size,self.img_size)
+            # bbox_output = self.bmodel.forward(orig_img.to('cuda'))[0]
 
             # CHEATING
-            # bbox_output = boundaries
+            bbox_output = boundaries
             rect = tuple(int(b * 512) for b in bbox_output)
             image = image.crop(rect)
             pass
@@ -102,21 +102,25 @@ class PositionFinder(nn.Module):
         #defining the layers here
 
         #Convolutional layers
-        self.conv1 = nn.Conv2d(3, 16, 1, padding=0)
-        self.conv1_bn = nn.BatchNorm2d(16)
-        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-        self.conv2_bn = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 64, 1, padding=0)
-        self.conv3_bn = nn.BatchNorm2d(64)
-        self.conv4 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv4_bn = nn.BatchNorm2d(128)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.conv1_bn = nn.BatchNorm2d(32)
+        self.conv2_s = nn.Conv2d(32, 64, 3, padding=1, stride=2)
+        self.conv2_1 = nn.Conv2d(64, 64, 1, padding=0)
+        self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv3_s = nn.Conv2d(64, 128, 3, padding=1, stride=2)
+        self.conv3_1 = nn.Conv2d(128, 128, 1, padding=0)
+        self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv4_s = nn.Conv2d(128, 256, 3, padding=1, stride=2)
+        self.conv4_1 = nn.Conv2d(256, 256, 1, padding=0)
+        self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
         self.pool = nn.MaxPool2d(2,2)
+        self.avgpool = nn.AvgPool2d(2,2)
         # self.roi_size = 16
         # self.roi = ops.PSRoIAlign((self.roi_size,self.roi_size), 1/16, 2)
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(128*size + 2, 500)
+        self.hidden1 = nn.Linear(256*size + 2, 500)
         self.dense1_bn = nn.BatchNorm1d(1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
@@ -130,98 +134,151 @@ class PositionFinder(nn.Module):
         self.hidden1.bias.data.zero_()
         self.hidden2.weight.data.zero_()
         self.hidden2.bias.data.zero_()
-        self.conv1.weight.data.zero_()
-        self.conv1.bias.data.zero_()
-        self.conv2.weight.data.zero_()
-        self.conv2.bias.data.zero_()
-        self.conv3.weight.data.zero_()
-        self.conv3.bias.data.zero_()
-        self.conv4.weight.data.zero_()
-        self.conv4.bias.data.zero_()
         self.output.weight.data.zero_()
         self.output.bias.data.zero_()
         
     def forward(self, x, details, bboxes):
-        # Convolutional layers
-        x = self.conv1_bn(F.relu(self.pool(self.conv1(x))))
-        x = F.relu(self.pool(self.conv2(x)))
-        x = F.relu(self.pool(self.conv3(x)))
-        x = F.relu(self.pool(self.conv4(x)))
+        #Convolutional layers
+        out = self.conv1_bn(F.relu(self.conv1(x)))
+        out = F.relu(self.conv2_s(out))
+        res1 = out
+        out = F.relu(self.conv2_1(out))
+        out = F.relu(self.conv2(out))
+        out += res1
+
+        out = F.relu(self.conv3_s(out))
+        res2 = out
+        out = F.relu(self.conv3_1(out))
+        out = F.relu(self.conv3(out))
+        out += res2
+
+        out = F.relu(self.conv4_s(out))
+        res3 = out
+        out = F.relu(self.conv4_1(out))
+        out = F.relu(self.conv4(out))
+        out += res3
+        out = self.avgpool(out)
 
         # make sure input tensor is flattened
         # torch.Size([16, 512, 16, 16])
         size = self.img_size//16 * self.img_size//16
-        x = x.view(-1, 128*size)
-        # x = x.view(-1, 512//(self.roi_size*self.roi_size)*size)
-        x = torch.cat((x,details), dim = 1)
-        # x = torch.cat((x,details, bboxes), dim = 1)
+        out = out.view(-1, 256*size)
+        out = torch.cat((out,details), dim = 1)
+        # x = torch.cat((out,details, bboxes), dim = 1)
         
 
         #Forward pass through the network, returns the output
-        x = self.dropout(F.relu(self.hidden1(x)))
-        # x = self.dropout(F.relu(self.hidden2(x)))
-        x = self.output(x)
+        out = self.dropout(F.relu(self.hidden1(out)))
+        # x = self.dropout(F.relu(self.hidden2(out)))
+        out = self.output(out)
 
         #confidences
         # y = x[:,5*2:5*3]
         # x = x[:,:5*2]
-        x = x.view(x.shape[0], -1, 2)
+        out = out.view(out.shape[0], -1, 2)
         # y = torch.sigmoid(y)
         # y = F.log_softmax(y, dim=1)
-        return x
+        return out
 
 class BoundingBoxFinder(nn.Module):
-    def __init__(self, img_size, param):
+    def __init__(self, img_size, param = None):
         super().__init__()
         self.img_size = img_size
+        if param is None:
+            param = {
+                'epochs' : 8,
+                'learning' : 0.004,
+                'conv1_c' : 8,
+                'conv1_bn' : False,
+                'conv2_c' : 16,
+                'conv3_c' : 32,
+                'drop' : 0.4,
+                'hidden' : 128
+            } 
         self.param = param
         #defining the layers here
 
         #Convolutional layers
-        self.conv1 = nn.Conv2d(3, param["conv1_c"], 1, padding=0)
-        self.conv1_bn = nn.BatchNorm2d(param["conv1_c"])
-        self.conv2 = nn.Conv2d(param["conv1_c"], param["conv2_c"], 3, padding=1)
-        self.conv3 = nn.Conv2d(param["conv2_c"], param["conv3_c"], 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.conv1_bn = nn.BatchNorm2d(32)
+        self.conv2_s = nn.Conv2d(32, 64, 3, padding=1, stride=2)
+        self.conv2_1 = nn.Conv2d(64, 64, 1, padding=0)
+        self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv3_s = nn.Conv2d(64, 128, 3, padding=1, stride=2)
+        self.conv3_1 = nn.Conv2d(128, 128, 1, padding=0)
+        self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv4_s = nn.Conv2d(128, 256, 3, padding=1, stride=2)
+        self.conv4_1 = nn.Conv2d(256, 256, 1, padding=0)
+        self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
         self.pool = nn.MaxPool2d(2,2)
+        self.avgpool = nn.AvgPool2d(2,2)
 
-        size = self.img_size//8 * self.img_size//8
+        size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(param["conv3_c"]*size, param["hidden"])
+        self.hidden1 = nn.Linear(256*size, 1000)
         # self.hidden2 = nn.Linear(1000, 500)
-        self.output = nn.Linear(param["hidden"], 4)
+        self.output = nn.Linear(1000, 4)
 
         # Dropout module with 0.2 drop probability
         self.dropout = nn.Dropout(p=param["drop"])
 
     def initialize(self):
+        # for conv in [self.conv1, self.conv1_bn, self.conv1_s, 
+        #             self.conv2, self.conv2_s,
+        #             self.conv3, self.conv3_s,
+        #             self.conv4 ]:
+        #     conv.weight.data.zero_()
+        #     conv.bias.data.zero_()
         self.hidden1.weight.data.zero_()
         self.hidden1.bias.data.zero_()
-        self.conv1.weight.data.zero_()
-        self.conv1.bias.data.zero_()
-        self.conv2.weight.data.zero_()
-        self.conv2.bias.data.zero_()
-        self.conv3.weight.data.zero_()
-        self.conv3.bias.data.zero_()
         self.output.weight.data.zero_()
         self.output.bias.data.zero_()
         
     def forward(self, x):
         #Convolutional layers
-        x = F.relu(self.pool(self.conv1(x)))
+        out = self.conv1(x)
         if self.param["conv1_bn"]:
-            x = self.conv1_bn(x)
-        x = F.relu(self.pool(self.conv2(x)))
-        x = F.relu(self.pool(self.conv3(x)))
+            out = self.conv1_bn(out)
+        out = F.relu(out)
+        
+        out = self.conv2_s(out)
+        out = F.relu(out)
+
+        res1 = out
+        out = self.conv2_1(out)
+        out = F.relu(out)
+        out = self.conv2(out)
+        out = F.relu(out)
+        out += res1
+
+        out = self.conv3_s(out)
+        out = F.relu(out)
+        res2 = out
+        out = self.conv3_1(out)
+        out = F.relu(out)
+        out = self.conv3(out)
+        out = F.relu(out)
+        out += res2
+
+        out = self.conv4_s(out)
+        out = F.relu(out)
+        res3 = out
+        out = self.conv4_1(out)
+        out = F.relu(out)
+        out = self.conv4(out)
+        out = F.relu(out)
+        out += res3
+        out = self.avgpool(out)
 
         # make sure input tensor is flattened
-        size = self.img_size//8 * self.img_size//8
-        x = x.view(-1, self.param["conv3_c"]*size)
+        size = self.img_size//16 * self.img_size//16
+        out = out.view(-1, 256*size)
 
         #Forward pass through the network, returns the output
-        x = self.dropout(F.relu(self.hidden1(x)))
-        x = self.output(x)
+        out = self.dropout(F.relu(self.hidden1(out)))
+        out = self.output(out)
         
-        return x
+        return out
 
 def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
     res = np.copy(output)

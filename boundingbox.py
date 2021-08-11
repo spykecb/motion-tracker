@@ -29,11 +29,11 @@ test_transforms = transforms.Compose([
                                                              [0.229, 0.224, 0.225])
                                       ])
 
-motions = MotionDataset('train/input.csv', 'train', train_transforms, minmax, minmax_z)
+motions = MotionDataset('train/input_old.csv', 'train', train_transforms, minmax, minmax_z)
 trainloader = DataLoader(motions, batch_size=8, shuffle=True)
 inp, output = next(iter(trainloader))
 
-motions_test = MotionDataset('test/input.csv', 'test', test_transforms, minmax, minmax_z)
+motions_test = MotionDataset('test/input_old.csv', 'test', test_transforms, minmax, minmax_z)
 testloader = torch.utils.data.DataLoader(motions_test, batch_size=8, shuffle=True)
 
 
@@ -48,7 +48,7 @@ def train(param):
     device = 'cuda'
     bmodel.to(device)
     train_losses, test_losses = [], []
-    epochs = 5
+    epochs = param["epochs"]
 
     for e in range(epochs):
         running_loss = 0
@@ -99,13 +99,14 @@ def train(param):
     torch.save(bmodel.state_dict(), PATH)
 
 params = {
-    'learning' : [0.0002, 0.0007, 0.002, 0.004],
+    'epochs' : [8],
+    'learning' : [0.004],
     'conv1_c' : [8],
-    'conv1_bn' : [False, True],
+    'conv1_bn' : [False],
     'conv2_c' : [16],
     'conv3_c' : [32],
-    'drop' : [0, 0.4],
-    'hidden' : [128, 512]
+    'drop' : [0.4],
+    'hidden' : [128]
 } 
 
 for learning in params["learning"]:
@@ -115,16 +116,18 @@ for learning in params["learning"]:
                 for conv3_c in params["conv3_c"]:
                     for drop in params["drop"]:
                         for hidden in params["hidden"]:
-                            param = {
-                                'learning' : learning,
-                                'conv1_c' :conv1_c,
-                                'conv1_bn' : conv1_bn,
-                                'conv2_c' : conv2_c,
-                                'conv3_c' : conv3_c,
-                                'drop' : drop,
-                                'hidden' : hidden
-                            }
-                            train(param)
+                            for epochs in params["epochs"]:
+                                param = {
+                                    'epochs' : epochs,
+                                    'learning' : learning,
+                                    'conv1_c' :conv1_c,
+                                    'conv1_bn' : conv1_bn,
+                                    'conv2_c' : conv2_c,
+                                    'conv3_c' : conv3_c,
+                                    'drop' : drop,
+                                    'hidden' : hidden
+                                }
+                                train(param)
 
 
 

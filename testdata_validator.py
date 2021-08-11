@@ -14,7 +14,7 @@ with open('test/input.csv', 'r') as inp, open('test/input_new.csv', 'w', newline
         path = "test/{}".format(row[0])
         zeros = np.count_nonzero(np.array(row[positions_to:confidences_to]) == '0')
         ones = np.count_nonzero(np.array(row[positions_to:confidences_to]) == '1')
-        if os.path.isfile(path)  and ones > zeros:
+        if os.path.isfile(path)  and zeros == 0:
             writer.writerow(row)
 widths, heights = [],[]
 with open('train/input.csv', 'r') as inp, open('train/input_new.csv', 'w', newline='') as out:
@@ -32,7 +32,7 @@ with open('train/input.csv', 'r') as inp, open('train/input_new.csv', 'w', newli
         widths.append(w)
         heights.append(h)
         bbox_output = [x,y,x2,y2]
-        if os.path.isfile(path) and ones > zeros:
+        if os.path.isfile(path) and zeros == 0:
         # if os.path.isfile(path) and w >= 64 and h >= 64:
             # image = Image.open(path)
             # rect = tuple(int(b) for b in bbox_output)
@@ -49,7 +49,7 @@ print(widths.mean(), heights.mean())
 
 
 
-os.remove("test/input.csv")
-os.remove("train/input.csv")
-os.rename('train/input_new.csv', 'train/input.csv')
-os.rename('test/input_new.csv', 'test/input.csv')
+# os.remove("test/input.csv")
+# os.remove("train/input.csv")
+# os.rename('train/input_new.csv', 'train/input.csv')
+# os.rename('test/input_new.csv', 'test/input.csv')
