@@ -107,21 +107,25 @@ class PositionFinder(nn.Module):
         self.conv2_s = nn.Conv2d(32, 64, 3, padding=1, stride=2)
         self.conv2_1 = nn.Conv2d(64, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv2_bn = nn.BatchNorm2d(64)
         self.conv3_s = nn.Conv2d(64, 128, 3, padding=1, stride=2)
         self.conv3_1 = nn.Conv2d(128, 128, 3, padding=1)
         self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv3_bn = nn.BatchNorm2d(128)
         self.conv4_s = nn.Conv2d(128, 256, 3, padding=1, stride=2)
         self.conv4_1 = nn.Conv2d(256, 256, 3, padding=1)
         self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv4_bn = nn.BatchNorm2d(256)
         self.conv5_s = nn.Conv2d(256, 512, 3, padding=1, stride=2)
         self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
         self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_bn = nn.BatchNorm2d(512)
         self.pool = nn.MaxPool2d(2,2)
         self.avgpool = nn.AvgPool2d(2,2)
         # self.roi_size = 16
         # self.roi = ops.PSRoIAlign((self.roi_size,self.roi_size), 1/16, 2)
 
-        size = self.img_size//16 * self.img_size//16
+        size = self.img_size//32 * self.img_size//32
         #Linear layers
         self.hidden1 = nn.Linear(512*size + 2, 500)
         self.dense1_bn = nn.BatchNorm1d(1000)
@@ -142,7 +146,7 @@ class PositionFinder(nn.Module):
         
     def forward(self, x, details, bboxes):
         #Convolutional layers
-        out = self.conv1_bn(F.relu(self.conv1(x)))
+        out = F.relu(self.conv1_bn(self.conv1(x)))
         out = F.relu(self.conv2_s(out))
        
         res1 = out
@@ -151,28 +155,30 @@ class PositionFinder(nn.Module):
         out += res1
 
         out = F.relu(self.conv3_s(out))
-        
-        res2 = out
-        out = F.relu(self.conv3_1(out))
-        out = F.relu(self.conv3(out))
-        out += res2
+        for i in range(2):
+            res2 = out
+            out = F.relu(self.conv3_1(out))
+            out = F.relu(self.conv3(out))
+            out += res2
 
         out = F.relu(self.conv4_s(out))
-        res3 = out
-        out = F.relu(self.conv4_1(out))
-        out = F.relu(self.conv4(out))
-        out += res3
+        for i in range(4):
+            res3 = out
+            out = F.relu(self.conv4_1(out))
+            out = F.relu(self.conv4(out))
+            out += res3
 
         out = F.relu(self.conv5_s(out))
-        res4 = out
-        out = F.relu(self.conv5_1(out))
-        out = F.relu(self.conv5(out))
-        out += res4
-        # out = self.avgpool(out)
+        for i in range(2):
+            res4 = out
+            out = F.relu(self.conv5_1(out))
+            out = F.relu(self.conv5(out))
+            out += res4
+        out = self.avgpool(out)
 
         # make sure input tensor is flattened
         # torch.Size([16, 512, 16, 16])
-        size = self.img_size//16 * self.img_size//16
+        size = self.img_size//32 * self.img_size//32
         out = out.view(-1, 512*size)
         out = torch.cat((out,details), dim = 1)
         # x = torch.cat((out,details, bboxes), dim = 1)

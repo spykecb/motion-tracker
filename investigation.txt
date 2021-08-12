@@ -220,3 +220,16 @@ D:\Users\bihta\anaconda3\lib\site-packages\torch\nn\functional.py:718: UserWarni
 (Epoch 6/8) Training loss: 1.7776563880006238, Test loss: 1.7704980373382568
 (Epoch 7/8) Training loss: 1.6882383423679208, Test loss: 1.7020951509475708
 (Epoch 8/8) Training loss: 1.6265170306143677, Test loss: 1.5764646530151367
+
+
+batchnorm first layer, 4 batch size, 0.01 learning rate
+(Epoch 1/10) Training loss: 0.9004361052858159, Test loss: 0.7087252736091614
+(Epoch 2/10) Training loss: 0.6003888472097074, Test loss: 0.5498822331428528
+(Epoch 3/10) Training loss: 0.49251501222328886, Test loss: 0.4645659923553467
+(Epoch 4/10) Training loss: 0.43778436289607087, Test loss: 0.46531158685684204
+(Epoch 5/10) Training loss: 0.40171750918010296, Test loss: 0.4038870632648468
+(Epoch 6/10) Training loss: 0.3751858035191914, Test loss: 0.39899614453315735
+(Epoch 7/10) Training loss: 0.35310069927421944, Test loss: 0.3665882647037506
+(Epoch 8/10) Training loss: 0.3335895679983092, Test loss: 0.3417019248008728
+(Epoch 9/10) Training loss: 0.31649157082960927, Test loss: 0.329854816198349
+(Epoch 10/10) Training loss: 0.3049884344999192, Test loss: 0.3436211347579956
