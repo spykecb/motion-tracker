@@ -47,10 +47,10 @@ while(True):
             images = images.to(device)
             
             bboxes = bmodel.forward(images)
-            x = int(max(0, min(1, bboxes[0][0])) * 512)
-            y = int(max(0, min(1, bboxes[0][1])) * 512)
-            w = int(max(0, min(1, bboxes[0][2])) * 512 - x) 
-            h = int(max(0, min(1, bboxes[0][3])) * 512 - y) 
+            x = int(max(0, min(1, bboxes[0][0])) * frame.shape[1])
+            y = int(max(0, min(1, bboxes[0][1])) * frame.shape[0])
+            w = int(max(0, min(1, bboxes[0][2])) * frame.shape[1] - x) 
+            h = int(max(0, min(1, bboxes[0][3])) * frame.shape[0] - y) 
             crop_img = frame[y:y+h, x:x+w]
             img2 = tran(crop_img)
             img2 = resi(img2)
@@ -99,6 +99,7 @@ while(True):
             start_time = time.time()
 
         # Display the resulting frame
+        # cv2.imshow('frame', crop_img)
         cv2.imshow('frame', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
