@@ -29,11 +29,11 @@ test_transforms = transforms.Compose([
                                                              [0.229, 0.224, 0.225])
                                       ])
 
-motions = MotionDataset('train/input_old.csv', 'train', train_transforms, minmax, minmax_z)
+motions = MotionDataset('train/input.csv', 'train', train_transforms, minmax, minmax_z)
 trainloader = DataLoader(motions, batch_size=8, shuffle=True)
 inp, output = next(iter(trainloader))
 
-motions_test = MotionDataset('test/input_old.csv', 'test', test_transforms, minmax, minmax_z)
+motions_test = MotionDataset('test/input.csv', 'test', test_transforms, minmax, minmax_z)
 testloader = torch.utils.data.DataLoader(motions_test, batch_size=8, shuffle=True)
 
 
@@ -99,7 +99,7 @@ def train(param):
     torch.save(bmodel.state_dict(), PATH)
 
 params = {
-    'epochs' : [8],
+    'epochs' : [6],
     'learning' : [0.004],
     'conv1_c' : [8],
     'conv1_bn' : [False],

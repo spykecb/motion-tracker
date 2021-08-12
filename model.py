@@ -105,14 +105,17 @@ class PositionFinder(nn.Module):
         self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.conv1_bn = nn.BatchNorm2d(32)
         self.conv2_s = nn.Conv2d(32, 64, 3, padding=1, stride=2)
-        self.conv2_1 = nn.Conv2d(64, 64, 1, padding=0)
+        self.conv2_1 = nn.Conv2d(64, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
         self.conv3_s = nn.Conv2d(64, 128, 3, padding=1, stride=2)
-        self.conv3_1 = nn.Conv2d(128, 128, 1, padding=0)
+        self.conv3_1 = nn.Conv2d(128, 128, 3, padding=1)
         self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
         self.conv4_s = nn.Conv2d(128, 256, 3, padding=1, stride=2)
-        self.conv4_1 = nn.Conv2d(256, 256, 1, padding=0)
+        self.conv4_1 = nn.Conv2d(256, 256, 3, padding=1)
         self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv5_s = nn.Conv2d(256, 512, 3, padding=1, stride=2)
+        self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
         self.pool = nn.MaxPool2d(2,2)
         self.avgpool = nn.AvgPool2d(2,2)
         # self.roi_size = 16
@@ -120,7 +123,7 @@ class PositionFinder(nn.Module):
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(256*size + 2, 500)
+        self.hidden1 = nn.Linear(512*size + 2, 500)
         self.dense1_bn = nn.BatchNorm1d(1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
@@ -141,12 +144,14 @@ class PositionFinder(nn.Module):
         #Convolutional layers
         out = self.conv1_bn(F.relu(self.conv1(x)))
         out = F.relu(self.conv2_s(out))
+       
         res1 = out
         out = F.relu(self.conv2_1(out))
         out = F.relu(self.conv2(out))
         out += res1
 
         out = F.relu(self.conv3_s(out))
+        
         res2 = out
         out = F.relu(self.conv3_1(out))
         out = F.relu(self.conv3(out))
@@ -157,12 +162,18 @@ class PositionFinder(nn.Module):
         out = F.relu(self.conv4_1(out))
         out = F.relu(self.conv4(out))
         out += res3
-        out = self.avgpool(out)
+
+        out = F.relu(self.conv5_s(out))
+        res4 = out
+        out = F.relu(self.conv5_1(out))
+        out = F.relu(self.conv5(out))
+        out += res4
+        # out = self.avgpool(out)
 
         # make sure input tensor is flattened
         # torch.Size([16, 512, 16, 16])
         size = self.img_size//16 * self.img_size//16
-        out = out.view(-1, 256*size)
+        out = out.view(-1, 512*size)
         out = torch.cat((out,details), dim = 1)
         # x = torch.cat((out,details, bboxes), dim = 1)
         
@@ -202,20 +213,23 @@ class BoundingBoxFinder(nn.Module):
         self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.conv1_bn = nn.BatchNorm2d(32)
         self.conv2_s = nn.Conv2d(32, 64, 3, padding=1, stride=2)
-        self.conv2_1 = nn.Conv2d(64, 64, 1, padding=0)
+        self.conv2_1 = nn.Conv2d(64, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
         self.conv3_s = nn.Conv2d(64, 128, 3, padding=1, stride=2)
-        self.conv3_1 = nn.Conv2d(128, 128, 1, padding=0)
+        self.conv3_1 = nn.Conv2d(128, 128, 3, padding=1)
         self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
         self.conv4_s = nn.Conv2d(128, 256, 3, padding=1, stride=2)
-        self.conv4_1 = nn.Conv2d(256, 256, 1, padding=0)
+        self.conv4_1 = nn.Conv2d(256, 256, 3, padding=1)
         self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv5_s = nn.Conv2d(256, 512, 3, padding=1, stride=2)
+        self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
         self.pool = nn.MaxPool2d(2,2)
         self.avgpool = nn.AvgPool2d(2,2)
 
         size = self.img_size//16 * self.img_size//16
         #Linear layers
-        self.hidden1 = nn.Linear(256*size, 1000)
+        self.hidden1 = nn.Linear(512*size, 1000)
         # self.hidden2 = nn.Linear(1000, 500)
         self.output = nn.Linear(1000, 4)
 
@@ -235,6 +249,9 @@ class BoundingBoxFinder(nn.Module):
         self.output.bias.data.zero_()
         
     def forward(self, x):
+        # still there is no proof that resnet is benefiting us in regards to accuracy or performance
+        # not sure about the avgpool either
+
         #Convolutional layers
         out = self.conv1(x)
         if self.param["conv1_bn"]:
@@ -253,6 +270,7 @@ class BoundingBoxFinder(nn.Module):
 
         out = self.conv3_s(out)
         out = F.relu(out)
+
         res2 = out
         out = self.conv3_1(out)
         out = F.relu(out)
@@ -262,17 +280,27 @@ class BoundingBoxFinder(nn.Module):
 
         out = self.conv4_s(out)
         out = F.relu(out)
+
         res3 = out
         out = self.conv4_1(out)
         out = F.relu(out)
         out = self.conv4(out)
         out = F.relu(out)
         out += res3
-        out = self.avgpool(out)
+
+        out = self.conv5_s(out)
+        out = F.relu(out)
+        res4 = out
+        out = self.conv5_1(out)
+        out = F.relu(out)
+        out = self.conv5(out)
+        out = F.relu(out)
+        out += res4
+        # out = self.avgpool(out)
 
         # make sure input tensor is flattened
         size = self.img_size//16 * self.img_size//16
-        out = out.view(-1, 256*size)
+        out = out.view(-1, 512*size)
 
         #Forward pass through the network, returns the output
         out = self.dropout(F.relu(self.hidden1(out)))
@@ -286,13 +314,18 @@ def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
     y = bboxes[1]
     w = (bboxes[2] - x) # denormalized width of bounding box
     h = (bboxes[3] - y) # denormalized height of bounding box
-    # print(x * img_size,y * img_size,w,h)
-    # print(w,h, "before", output)
-    # print("({} - {}) * ({}/{})".format(output[0::2],x.item(),img_size,w.item()))
     res[0::2] = (res[0::2] - x.item()) / w.item()
     res[1::2] = (res[1::2] - y.item()) / h.item()
-    # print("after", output)
     res = np.clip(res, 0, 1)
+    return res
+
+def align_result_out_of_bounding_boxes(result, bboxes):
+    res = np.copy(result.cpu())
+    w = (bboxes[2] - bboxes[0])
+    h = (bboxes[3] - bboxes[1]) 
+    for i in range(result.shape[0]):
+        res[i][0] = bboxes[0] + result[i][0]*w
+        res[i][1] = bboxes[1] + result[i][1]*h
     return res
 
 
