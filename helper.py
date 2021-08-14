@@ -70,28 +70,6 @@ def get_minmax(train_path, test_path):
 
     return (minval, maxval), (minval_z, maxval_z)
 
-def evaluate_result(logps):
-    for body_index in range(5):
-        xyz = []
-        xyz_e = []
-        for pos_index in range(2):
-            xyz.append(logps_denormalized[0][body_index][pos_index])
-        positions.append(xyz)
-    return positions
-
-def evaluate_model(model, input):
-    positions = []
-    # Turn off gradients to speed up this part
-    with torch.no_grad():
-        for k in inp:
-            inp[k] = inp[k].to('cpu')
-        
-        logps = model.forward(inp["images"], inp["details"], inp["bboxes"])
-        positions = evaluate_result(logps)
-
-    positions = np.array(positions)
-    return positions
-
 def evaluate_model(model, inp, expected):
     positions = []
     positions_expected = []

@@ -11,14 +11,13 @@ import os
 class MotionDataset(Dataset):
     """Motion dataset."""
 
-    def __init__(self, csv_file_path, root_dir, transforms, minmax, minmax_z, img_size = 512, bmodel = None):        
+    def __init__(self, csv_file_path, root_dir, transforms, minmax, minmax_z, bmodel = None):        
         self.csv_file = pd.read_csv(csv_file_path, header=None)
         self.root_dir = root_dir
         self.transforms = transforms
         self.minmax = minmax
         self.minmax_z = minmax_z
         self.bmodel = bmodel
-        self.img_size = img_size
 
     def __len__(self):
         return len(self.csv_file)
@@ -34,6 +33,7 @@ class MotionDataset(Dataset):
         
         # print(img_name)
         image = Image.open(img_name)
+        img_size = image.size
         
         input_to = 3
         positions_to = input_to + 22 * 2
@@ -50,7 +50,8 @@ class MotionDataset(Dataset):
 
         # #normalization
         positions = (positions - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
-        boundaries = boundaries / self.img_size
+        boundaries[0::2] = boundaries[0::2] / img_size[0]
+        boundaries[1::2] = boundaries[1::2] / img_size[1]
 
         # TODO: input positions have inverted y (lower left = (0,0)), it should be upper left
         positions = np.array(positions)
@@ -68,9 +69,8 @@ class MotionDataset(Dataset):
 
             # CHEATING
             bbox_output = boundaries
-            rect = tuple(int(b * 512) for b in bbox_output)
+            rect = tuple(int(b * img_size[0]) if i%2 == 0 else int(b * img_size[1]) for i, b in enumerate(bbox_output))
             image = image.crop(rect)
-            pass
         
         if self.transforms:
             image = self.transforms(image)
@@ -92,6 +92,8 @@ class MotionDataset(Dataset):
 
         assert positions.min() >= 0
         assert positions.max() <= 1
+        assert boundaries.min() >= 0
+        assert boundaries.max() <= 1
         
         return inp, output
 
@@ -127,7 +129,7 @@ class PositionFinder(nn.Module):
 
         size = self.img_size//32 * self.img_size//32
         #Linear layers
-        self.hidden1 = nn.Linear(512*size + 2, 500)
+        self.hidden1 = nn.Linear(512*size, 500)
         self.dense1_bn = nn.BatchNorm1d(1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
@@ -180,7 +182,7 @@ class PositionFinder(nn.Module):
         # torch.Size([16, 512, 16, 16])
         size = self.img_size//32 * self.img_size//32
         out = out.view(-1, 512*size)
-        out = torch.cat((out,details), dim = 1)
+        # out = torch.cat((out,details), dim = 1)
         # x = torch.cat((out,details, bboxes), dim = 1)
         
 
