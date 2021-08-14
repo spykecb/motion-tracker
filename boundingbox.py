@@ -99,7 +99,7 @@ def train(param):
     torch.save(bmodel.state_dict(), PATH)
 
 params = {
-    'epochs' : [6],
+    'epochs' : [4],
     'learning' : [0.004],
     'conv1_c' : [8],
     'conv1_bn' : [False],

@@ -85,7 +85,7 @@ def evaluate_model(model, inp, expected):
         labels_denormalized = expected["positions"]
         print(logps.shape)
         
-        for body_index in range(5):
+        for body_index in range(22):
             xyz = []
             xyz_e = []
             for pos_index in range(2):
@@ -102,15 +102,26 @@ def evaluate_model(model, inp, expected):
 
 def get_label(i):
     label = ""
-    if i == 0:
+    # if i == 0:
+    #     label = "Head"
+    # elif i == 1:
+    #     label = "LeftHand"
+    # elif i == 2:
+    #     label = "RightHand"
+    # elif i == 3:
+    #     label = "LeftFoot"
+    # elif i == 4:
+    #     label = "RightFoot"
+
+    if i == 5:
         label = "Head"
-    elif i == 1:
+    elif i == 9:
         label = "LeftHand"
-    elif i == 2:
+    elif i == 17:
         label = "RightHand"
-    elif i == 3:
+    elif i == 12:
         label = "LeftFoot"
-    elif i == 4:
+    elif i == 20:
         label = "RightFoot"
 
     return label

@@ -45,11 +45,13 @@ class MotionDataset(Dataset):
         boundaries = self.csv_file.iloc[idx, confidences_to:boundaries_to].astype('float32').values
 
         #only caring about head,hand,and legs
-        positions = np.concatenate((positions[10:12], positions[18:20], positions[34:36], positions[24:26], positions[40:42]))
-        confidences = np.array([confidences[5], confidences[9], confidences[17], confidences[12], confidences[20]])
+        # positions = np.concatenate((positions[10:12], positions[18:20], positions[34:36], positions[24:26], positions[40:42]))
+        # confidences = np.array([confidences[5], confidences[9], confidences[17], confidences[12], confidences[20]])
 
         # #normalization
-        positions = (positions - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+        # positions = (positions - self.minmax[0]) / (self.minmax[1] - self.minmax[0])
+        positions[0::2] = positions[0::2] / 640 
+        positions[1::2] = positions[1::2] / 360
         boundaries[0::2] = boundaries[0::2] / img_size[0]
         boundaries[1::2] = boundaries[1::2] / img_size[1]
 
@@ -133,7 +135,7 @@ class PositionFinder(nn.Module):
         self.dense1_bn = nn.BatchNorm1d(1000)
         # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
         # self.hidden2 = nn.Linear(1024, 512)
-        self.output = nn.Linear(500, 5*2)
+        self.output = nn.Linear(500, 22*2)
 
         # Dropout module with 0.2 drop probability
         self.dropout = nn.Dropout(p=0.2)

@@ -7,6 +7,8 @@ import numpy as np
 import time
 from torchvision import transforms
 vid = cv2.VideoCapture(0)
+vid.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
 
 img_width = 256
 device = 'cuda'
@@ -22,7 +24,7 @@ mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 font = cv2.FONT_HERSHEY_SIMPLEX
 
-minval, maxval = 0, 512
+minval, maxval = 0, 672
 
 start_time = time.time()
 fps_update = 1 # displays the frame rate every 1 second
@@ -45,7 +47,6 @@ while(True):
         
         with torch.no_grad():
             images = images.to(device)
-            
             bboxes = bmodel.forward(images)
             x = int(max(0, min(1, bboxes[0][0])) * frame.shape[1])
             y = int(max(0, min(1, bboxes[0][1])) * frame.shape[0])
@@ -60,12 +61,11 @@ while(True):
 
             logps = pmodel.forward(images2, details, bboxes)
             logps_denormalized = model.align_result_out_of_bounding_boxes(logps[0], bboxes[0])
-            for body_index in range(5):
+            for body_index in range(22):
                 xyz = []
                 xyz_e = []
                 for pos_index in range(2):
                     pos = logps_denormalized[body_index][pos_index]
-                    pos = pos * (maxval - minval) + minval
 
                     xyz.append(pos)
                 positions.append(xyz)
@@ -76,17 +76,17 @@ while(True):
         # desired button of your choice
 
         for i, bbox in enumerate(bboxes):
-            x1 = int(bbox[0].item() * 512) 
-            y1 = int(bbox[1].item() * 512)
-            x2 = int(bbox[2].item() * 512)
-            y2 = int(bbox[3].item() * 512)
+            x1 = int(bbox[0].item() * frame.shape[1]) 
+            y1 = int(bbox[1].item() * frame.shape[0])
+            x2 = int(bbox[2].item() * frame.shape[1])
+            y2 = int(bbox[3].item() * frame.shape[0])
             frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255,0,0), 2)
 
         for i, pos in enumerate(positions):
             # x = int(pos[0].item() // (512/frame.shape[0]))
             # y = int(pos[1].item() // (512/frame.shape[1]))
-            x = int(pos[0].item())
-            y = int(pos[1].item())
+            x = int(pos[0].item() * frame.shape[1])
+            y = int(pos[1].item() * frame.shape[0])
             frame = cv2.circle(frame, (x,y), radius=10, color=(0, 0, 255), thickness=-1)
             frame = cv2.putText(frame, helper.get_label(i), (x,y), color=(0, 0, 255), fontFace=font, fontScale=1, thickness=2)
 
