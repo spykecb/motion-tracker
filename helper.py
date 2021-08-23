@@ -3,8 +3,10 @@ import numpy as np
 import pandas as pd
 import math
 import torch
-from torch import nn, optim
+import torchvision
+from torch import nn, optim, Tensor
 from torch.autograd import Variable
+from typing import Optional, List
 
 
 # first 44 prime numbers
@@ -58,9 +60,9 @@ def get_minmax(train_path, test_path):
     #get min max
     train_csv = pd.read_csv(train_path)
     test_csv = pd.read_csv(test_path)
-    print(train_csv.iloc[:, 3:].to_numpy())
-    maxval = max(train_csv.iloc[:, 3:].to_numpy().max(), test_csv.iloc[:, 3:].to_numpy().max())
-    minval = min(train_csv.iloc[:, 3:].to_numpy().min(), test_csv.iloc[:, 3:].to_numpy().min())
+    until = 3 + 22 * 2
+    maxval = max(train_csv.iloc[:, 3:until].to_numpy().max(), test_csv.iloc[:, 3:until].to_numpy().max())
+    minval = min(train_csv.iloc[:, 3:until].to_numpy().min(), test_csv.iloc[:, 3:until].to_numpy().min())
 
     # get min max of the depths
     helper_arr = (np.arange(train_csv.shape[1]) + 1) % 3 == 0
@@ -83,8 +85,6 @@ def evaluate_model(model, inp, expected):
         logps = model.forward(inp["images"], inp["details"], inp["bboxes"])
         logps_denormalized = logps 
         labels_denormalized = expected["positions"]
-        print(logps.shape)
-        
         for body_index in range(22):
             xyz = []
             xyz_e = []
@@ -99,6 +99,58 @@ def evaluate_model(model, inp, expected):
     positions_expected = np.array(positions_expected)
     return positions, positions_expected
 
+class NestedTensor(object):
+    def __init__(self, tensors, mask: Optional[Tensor]):
+        self.tensors = tensors
+        self.mask = mask
+
+    def to(self, device):
+        # type: (Device) -> NestedTensor # noqa
+        cast_tensor = self.tensors.to(device)
+        mask = self.mask
+        if mask is not None:
+            assert mask is not None
+            cast_mask = mask.to(device)
+        else:
+            cast_mask = None
+        return NestedTensor(cast_tensor, cast_mask)
+
+    def decompose(self):
+        return self.tensors, self.mask
+
+    def __repr__(self):
+        return str(self.tensors)
+
+def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
+    if tensor_list[0].ndim == 3:
+        if torchvision._is_tracing():
+            # nested_tensor_from_tensor_list() does not export well to ONNX
+            # call _onnx_nested_tensor_from_tensor_list() instead
+            return _onnx_nested_tensor_from_tensor_list(tensor_list)
+
+        # TODO make it support different-sized images
+        max_size = _max_by_axis([list(img.shape) for img in tensor_list])
+        # min_size = tuple(min(s) for s in zip(*[img.shape for img in tensor_list]))
+        batch_shape = [len(tensor_list)] + max_size
+        b, c, h, w = batch_shape
+        dtype = tensor_list[0].dtype
+        device = tensor_list[0].device
+        tensor = torch.zeros(batch_shape, dtype=dtype, device=device)
+        mask = torch.ones((b, h, w), dtype=torch.bool, device=device)
+        for img, pad_img, m in zip(tensor_list, tensor, mask):
+            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
+            m[: img.shape[1], :img.shape[2]] = False
+    else:
+        raise ValueError('not supported')
+    return NestedTensor(tensor, mask)
+
+def _max_by_axis(the_list):
+    # type: (List[List[int]]) -> List[int]
+    maxes = the_list[0]
+    for sublist in the_list[1:]:
+        for index, item in enumerate(sublist):
+            maxes[index] = max(maxes[index], item)
+    return maxes
 
 def get_label(i):
     label = ""

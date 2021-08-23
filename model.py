@@ -2,6 +2,10 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, ops
+from transformer import Transformer, build_transformer
+from typing import Optional, List
+from helper import NestedTensor, nested_tensor_from_tensor_list
+from positional_encoding import build_position_encoding
 import torch.nn.functional as F
 from PIL import Image
 import numpy as np
@@ -92,17 +96,17 @@ class MotionDataset(Dataset):
         output["confidences"] = confidences
         output["boundaries"] = boundaries
 
-        assert positions.min() >= 0
-        assert positions.max() <= 1
+        assert positions.min() >= 0 and positions.min() <= 1
+        assert positions.max() <= 1 and positions.max() >= 0
         assert boundaries.min() >= 0
         assert boundaries.max() <= 1
+        # print(img_name)
         
         return inp, output
 
-class PositionFinder(nn.Module):
-    def __init__(self, img_size):
+class Backbone(nn.Module):
+    def __init__(self, args):
         super().__init__()
-        self.img_size = img_size
         #defining the layers here
 
         #Convolutional layers
@@ -124,21 +128,15 @@ class PositionFinder(nn.Module):
         self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
         self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
         self.conv5_bn = nn.BatchNorm2d(512)
-        self.pool = nn.MaxPool2d(2,2)
         self.avgpool = nn.AvgPool2d(2,2)
-        # self.roi_size = 16
-        # self.roi = ops.PSRoIAlign((self.roi_size,self.roi_size), 1/16, 2)
+        self.num_channels = 512
 
-        size = self.img_size//32 * self.img_size//32
-        #Linear layers
-        self.hidden1 = nn.Linear(512*size, 500)
-        self.dense1_bn = nn.BatchNorm1d(1000)
-        # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
-        # self.hidden2 = nn.Linear(1024, 512)
-        self.output = nn.Linear(500, 22*2)
+        num_joints = 22
+        #Transformer layer
+        # self.input_proj = nn.Conv2d(512, 512, kernel_size=1)
+        self.query_embed = nn.Embedding(num_joints, 512)
+        self.transformer = Transformer(512,8,6,6)
 
-        # Dropout module with 0.2 drop probability
-        self.dropout = nn.Dropout(p=0.2)
 
     def initialize(self):
         self.hidden1.weight.data.zero_()
@@ -148,7 +146,7 @@ class PositionFinder(nn.Module):
         self.output.weight.data.zero_()
         self.output.bias.data.zero_()
         
-    def forward(self, x, details, bboxes):
+    def forward(self, x):
         #Convolutional layers
         out = F.relu(self.conv1_bn(self.conv1(x)))
         out = F.relu(self.conv2_s(out))
@@ -180,6 +178,56 @@ class PositionFinder(nn.Module):
             out += res4
         out = self.avgpool(out)
 
+        return out
+
+
+class PositionFinder(nn.Module):
+    def __init__(self, args, backbone, transformer):
+        super().__init__()
+        self.img_size = args.img_size
+        self.backbone = backbone
+        self.transformer = transformer
+
+        num_joints = 22
+        #Transformer layer
+        # self.input_proj = nn.Conv2d(512, 512, kernel_size=1)
+        self.query_embed = nn.Embedding(num_joints, 512)
+        self.transformer = Transformer(512,8,6,6)
+
+        size = self.img_size//32 * self.img_size//32
+        #Linear layers
+        self.hidden1 = nn.Linear(512*size, 500)
+        self.dense1_bn = nn.BatchNorm1d(1000)
+        # self.hidden1 = nn.Linear(512//(self.roi_size*self.roi_size)*size, 500)
+        # self.hidden2 = nn.Linear(1024, 512)
+        self.output = nn.Linear(500, num_joints*2)
+
+        # self.lstm = nn.LSTM(22*2, 256, 2, batch_first=True)
+
+        # Dropout module with 0.2 drop probability
+        self.dropout = nn.Dropout(p=0.2)
+
+    def initialize(self):
+        self.hidden1.weight.data.zero_()
+        self.hidden1.bias.data.zero_()
+        self.hidden2.weight.data.zero_()
+        self.hidden2.bias.data.zero_()
+        self.output.weight.data.zero_()
+        self.output.bias.data.zero_()
+        
+    def forward(self, samples, details, bboxes):
+        if isinstance(samples, (list, torch.Tensor)):
+            samples = nested_tensor_from_tensor_list(samples)
+        features, pos = self.backbone(samples)
+
+        src, mask = features[-1].decompose()
+        assert mask is not None
+        #TODO: create transformer layer
+        # print(out.shape)
+        # 1. I guess we need to reshape into d*HW
+        # 2. get mask and positional embeddings
+        hs = self.transformer(src, mask, self.query_embed.weight, pos[-1])[0]
+
         # make sure input tensor is flattened
         # torch.Size([16, 512, 16, 16])
         size = self.img_size//32 * self.img_size//32
@@ -193,6 +241,7 @@ class PositionFinder(nn.Module):
         # x = self.dropout(F.relu(self.hidden2(out)))
         out = self.output(out)
 
+        # out, hidden = self.lstm(out, hidden)
         #confidences
         # y = x[:,5*2:5*3]
         # x = x[:,:5*2]
@@ -317,6 +366,35 @@ class BoundingBoxFinder(nn.Module):
         out = self.output(out)
         
         return out
+
+class Joiner(nn.Sequential):
+    def __init__(self, backbone, position_embedding):
+        super().__init__(backbone, position_embedding)
+
+    def forward(self, tensor_list: NestedTensor):
+        xs = self[0](tensor_list)
+        out: List[NestedTensor] = []
+        pos = []
+        for name, x in xs.items():
+            out.append(x)
+            # position encoding
+            pos.append(self[1](x).to(x.tensors.dtype))
+
+        return out, pos
+
+def build_backbone(args):
+    position_embedding = build_position_encoding(args)
+    train_backbone = True
+    backbone = Backbone(args)
+    model = Joiner(backbone, position_embedding)
+    model.num_channels = backbone.num_channels
+    return model
+
+def build_model(args):
+    backbone = build_backbone(args)
+    transformer = build_transformer(args)
+    model = PositionFinder(args, backbone, transformer)
+    return model
 
 def align_targets_in_bounding_boxes(output, bboxes, img_size = 256):
     res = np.copy(output)

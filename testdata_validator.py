@@ -53,10 +53,10 @@ with open('train/input.csv', 'r') as inp, open('train/input_new.csv', 'w', newli
         if os.path.isfile(path) and zeros == 0:
         # if os.path.isfile(path) and w >= 64 and h >= 64:
             
-            image = Image.open(path)
-            rect = tuple(int(b) for b in bbox_output)
-            image = image.crop(rect)
-            image.save(crop_path, "JPEG")
+            # image = Image.open(path)
+            # rect = tuple(int(b) for b in bbox_output)
+            # image = image.crop(rect)
+            # image.save(crop_path, "JPEG")
             count_train_kept += 1
             writer.writerow(row)
 
